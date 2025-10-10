@@ -1,0 +1,26 @@
+{
+  "name": "gemma-agent",
+  "transport": {
+    "provider": {
+      "name": "ollama",
+      "base_url": "http://localhost:11434",
+      "model": {
+        "name": "gemma3:4b",
+        "capabilities": {
+          "chat": {
+            "format": "openai-chat",
+            "options": {
+              "max_tokens": 150
+            }
+          },
+          "vision": {
+            "format": "openai-vision",
+            "options": {
+              "max_tokens": 150
+            }
+          }
+        }
+      }
+    }
+  }
+}

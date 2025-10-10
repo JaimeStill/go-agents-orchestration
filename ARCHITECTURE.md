@@ -64,7 +64,7 @@ github.com/JaimeStill/go-agents-orchestration/
     └── decision.go         # Decision logging
 ```
 
-## Phase 1: Foundation (Current)
+## Phase 1: Foundation (Completed)
 
 ### messaging Package
 
@@ -298,9 +298,34 @@ Hub A ← Agent X → Hub B
 
 Agent X acts as a bridge, enabling cross-hub communication.
 
+**Hub Metrics:**
+
+Track communication statistics for observability:
+
+```go
+type Metrics struct {
+    LocalAgents   int // Agents registered in this hub
+    MessagesSent  int // Messages sent through hub
+    MessagesRecv  int // Messages received by hub
+}
+
+// Get snapshot of current metrics
+snapshot := hub.Metrics()
+```
+
+**Implementation Status:**
+
+Phase 1 implementation is complete with:
+- Full messaging package with builders and types
+- Complete hub implementation with all communication patterns
+- MessageChannel for context-aware message delivery
+- Multi-hub coordination validated through ISS EVA example
+- Test coverage: 86% (exceeds 80% requirement)
+- Integration example: `examples/phase-01-hubs` demonstrates all patterns
+
 ### config Package
 
-**Purpose**: Configuration structures integrating with go-agents.
+**Purpose**: Hub configuration structures.
 
 **Configuration Structures:**
 
@@ -310,16 +335,22 @@ type HubConfig struct {
     // Hub identity
     Name string
 
-    // Orchestrator configuration
-    OrchestratorID    string
-    OrchestratorAgent *agentconfig.AgentConfig // go-agents config
-
     // Communication settings
     ChannelBufferSize int
     DefaultTimeout    time.Duration
 
     // Observability
     Logger *slog.Logger
+}
+
+// DefaultHubConfig provides sensible defaults
+func DefaultHubConfig() HubConfig {
+    return HubConfig{
+        Name:              "hub",
+        ChannelBufferSize: 100,
+        DefaultTimeout:    30 * time.Second,
+        Logger:            slog.Default(),
+    }
 }
 ```
 
@@ -329,29 +360,6 @@ type HubConfig struct {
 2. Transform to domain objects at package boundaries
 3. Runtime behavior depends on initialized state
 4. Configuration does not persist beyond initialization
-
-**Integration with go-agents:**
-
-```go
-// Create go-agents configuration
-agentConfig := &config.AgentConfig{
-    Transport: &config.TransportConfig{
-        Provider: "openai",
-        Model:    "gpt-4",
-        APIKey:   "key",
-    },
-    SystemPrompt: "You are an orchestrator",
-}
-
-// Use in hub configuration
-hubConfig := &config.HubConfig{
-    Name:              "main-hub",
-    OrchestratorID:    "orchestrator",
-    OrchestratorAgent: agentConfig, // Link to go-agents
-    ChannelBufferSize: 100,
-    DefaultTimeout:    30 * time.Second,
-}
-```
 
 ## Phase 2: State Management (Planned)
 
