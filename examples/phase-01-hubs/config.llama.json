@@ -1,6 +1,6 @@
 {
   "name": "llama-agent",
-  "transport": {
+  "client": {
     "provider": {
       "name": "ollama",
       "base_url": "http://localhost:11434",
@@ -8,16 +8,10 @@
         "name": "llama3.2:3b",
         "capabilities": {
           "chat": {
-            "format": "openai-chat",
-            "options": {
-              "max_tokens": 150
-            }
+            "max_tokens": 150
           },
           "tools": {
-            "format": "openai-tools",
-            "options": {
-              "max_tokens": 150
-            }
+            "max_tokens": 150
           }
         }
       }
