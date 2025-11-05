@@ -60,7 +60,7 @@ Build from lowest-level primitives to highest-level features:
 Level 1: messaging/     → Message primitives (no dependencies)
 Level 2: hub/          → Agent coordination (depends on messaging)
 Level 3: state/        → State graph execution (depends on messaging)
-Level 4: patterns/     → Workflow patterns (depends on hub + state)
+Level 4: workflows/    → Workflow patterns (depends on hub + state)
 Level 5: observability/ → Cross-cutting metrics (depends on all)
 ```
 
@@ -187,35 +187,41 @@ Following go-agents patterns:
 - ✅ Observer captures all execution events
 - ✅ Tests achieve 80%+ coverage (95.6% achieved)
 
-### Phase 4: Sequential Chains Pattern
+### Phase 4: Sequential Chains Pattern (Completed)
 
 **Goal**: Extract and generalize sequential chain pattern from classify-docs.
 
-**Estimated Time**: 6-7 hours
-
 **Packages:**
-- `patterns/`: Chain pattern, ChainConfig, ChainResult
+- `workflows/`: Chain pattern, ChainConfig, ChainResult ✅
+- `config/`: ChainConfig structure ✅
 
 **Features:**
-- Generic sequential chain with state accumulation
-- Extract from `classify-docs/pkg/processing/sequential.go`
-- ChainConfig for intermediate state capture and fail-fast
-- Progress callbacks for monitoring
-- Observer hooks for step completion
+- Generic sequential chain with state accumulation ✅
+- Extract from `classify-docs/pkg/processing/sequential.go` ✅
+- ChainConfig for intermediate state capture ✅
+- Progress callbacks for monitoring ✅
+- Observer hooks for step completion ✅
 
 **Integration:**
-- Works with any TContext type (including State from Phase 2)
-- Direct go-agents usage (no hub required)
-- Optional hub coordination for multi-agent steps
-- Observer integration for chain events
+- Works with any TContext type (including State from Phase 2) ✅
+- Direct go-agents usage (no hub required) ✅
+- Optional hub coordination for multi-agent steps ✅
+- Observer integration for chain events ✅
+
+**Deliverables:**
+- Working workflows package ✅
+- ChainError[TItem, TContext] with rich context ✅
+- ProcessChain[TItem, TContext] implementation ✅
+- Comprehensive tests (97.4% coverage) ✅
+- Complete documentation ✅
 
 **Success Criteria:**
-- Pattern extracted and generalized successfully
-- Works with multiple context types
-- State type works naturally as TContext
-- Hub integration is optional
-- Tests demonstrate various usage patterns
-- Tests achieve 80%+ coverage
+- ✅ Pattern extracted and generalized successfully
+- ✅ Works with multiple context types
+- ✅ State type works naturally as TContext
+- ✅ Hub integration is optional
+- ✅ Tests demonstrate various usage patterns
+- ✅ Tests achieve 80%+ coverage (97.4% achieved)
 
 ### Phase 5: Parallel Execution Pattern
 
@@ -224,7 +230,7 @@ Following go-agents patterns:
 **Estimated Time**: 7-9 hours
 
 **Packages:**
-- `patterns/`: Parallel pattern, ParallelConfig, worker pool
+- `workflows/`: Parallel pattern, ParallelConfig, worker pool
 
 **Features:**
 - Port architecture from classify-docs git history (commit d97ab1c^)
@@ -286,7 +292,7 @@ Following go-agents patterns:
 **Estimated Time**: 7-10 hours
 
 **Packages:**
-- `patterns/`: Conditional routing pattern, integration helpers
+- `workflows/`: Conditional routing pattern, integration helpers
 
 **Features:**
 - Conditional routing with predicate-based handler selection

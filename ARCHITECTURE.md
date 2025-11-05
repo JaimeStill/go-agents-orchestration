@@ -557,32 +557,66 @@ type GraphConfig struct {
     Observer      string
     MaxIterations int
 }
+
+// ChainConfig defines configuration for sequential chain execution
+type ChainConfig struct {
+    CaptureIntermediateStates bool
+    Observer                  string
+}
 ```
 
 **Implementation Status:**
 
-Configuration package is complete:
+Configuration package complete for current phases:
 - HubConfig (Phase 1)
 - GraphConfig (Phase 2)
-- Default configuration functions
+- ChainConfig (Phase 4)
+- Default configuration functions for all types
 - Test coverage: 100%
 
-## Phase 3: Workflow Patterns (Planned)
+## Phase 4-7: Workflow Patterns (Phase 4 Complete)
 
-### patterns Package
+### workflows Package
 
-**Purpose**: High-level workflow compositions built on state graphs.
+**Purpose**: Composable workflow patterns for orchestrating multi-step processes.
+
+**Location**: `pkg/workflows/`
+
+**Design Philosophy**: Generic orchestration primitives that work with any item and context types, extracted from real-world usage (classify-docs). All patterns support direct go-agents usage as the primary pattern, with optional hub coordination for multi-agent orchestration.
+
+**Implemented Patterns:**
+
+1. **Sequential Chain** (Phase 4 - Complete): Linear workflow with state accumulation implementing fold/reduce pattern
+   - Generic over TItem (items to process) and TContext (accumulated state)
+   - Observer integration with chain and step-level events
+   - Rich error context via ChainError[TItem, TContext]
+   - Optional intermediate state capture
+   - Progress callback support
+   - Test coverage: 97.4%
 
 **Planned Patterns:**
 
-1. **Sequential Chain**: Linear workflow with state accumulation
-2. **Parallel Execution**: Fan-out/fan-in with result aggregation
-3. **Conditional Routing**: State-based routing decisions
-4. **Stateful Workflows**: Complex state machines with cycles
+2. **Parallel Execution** (Phase 5): Fan-out/fan-in with result aggregation and order preservation
+3. **Conditional Routing** (Phase 7): State-based routing decisions with predicate evaluation
+4. **Stateful Workflows** (Phase 7): Complex compositions combining patterns with state graphs
 
-These patterns compose state graphs and hub messaging into reusable workflow building blocks.
+**Implementation Status:**
 
-## Phase 4: Observability (Planned)
+- Sequential Chain: Complete with comprehensive tests
+- Test coverage: 97.4% (exceeds 80% requirement)
+- Documentation: Complete with examples
+
+### Pattern Independence
+
+All workflow patterns are agnostic about processing approach:
+- ✅ Direct go-agents usage (primary pattern - like classify-docs)
+- ✅ Hub orchestration (optional for multi-agent coordination)
+- ✅ Pure data transformation (no agents required)
+- ✅ Mixed approaches (some steps with agents, some without)
+
+The processor function signatures intentionally don't constrain implementation, enabling maximum flexibility.
+
+## Phase 8: Observability (Planned)
 
 ### observability Package
 

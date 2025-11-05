@@ -39,14 +39,14 @@ Phase 3: State Graph Execution Engine
 Phase 4-5: Workflow Patterns (Built on State Foundation)
 ├── Sequential chains (Phase 4)
 ├── Parallel execution (Phase 5)
-└── Patterns use State as TContext during development
+└── Workflows use State as TContext during development
 
 Phase 6: Checkpointing Infrastructure
 └── Recovery capability for state graphs
 
 Phase 7: Integration
 ├── Conditional routing pattern
-├── Pattern/state composition helpers
+├── Workflow/state composition helpers
 └── Stateful workflows
 
 Phase 8: Full Observability
@@ -142,7 +142,7 @@ Each step receives current state, processes an item, and returns updated state. 
 **Primary Interface (Generic Over Item Type):**
 
 ```go
-// pkg/patterns/chain.go
+// pkg/workflows/chain.go
 
 // StepProcessor processes a single item and updates the context state.
 // 
@@ -242,10 +242,10 @@ Extract the generic pattern, removing document-specific dependencies:
 - Keep the clean state accumulation logic intact
 - Preserve error handling and progress reporting
 
-**Step 2: Create patterns package**
+**Step 2: Create workflows package**
 
 ```
-pkg/patterns/
+pkg/workflows/
 ├── chain.go          # Sequential chain implementation
 ├── chain_test.go     # Comprehensive tests
 └── doc.go            # Package documentation
@@ -306,7 +306,7 @@ processor := func(ctx context.Context, question string, conversation Conversatio
     return conversation, nil
 }
 
-result, err := patterns.ProcessChain(ctx, cfg, questions, initialConversation, processor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, questions, initialConversation, processor, nil)
 finalConversation := result.Final
 ```
 
@@ -339,7 +339,7 @@ processor := func(ctx context.Context, page document.Page, prompt string) (strin
     return response.Content(), nil
 }
 
-result, err := patterns.ProcessChain(ctx, cfg, pages, initialPrompt, processor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, pages, initialPrompt, processor, nil)
 finalPrompt := result.Final
 ```
 
@@ -369,7 +369,7 @@ processor := func(ctx context.Context, step AnalysisStep, report Report) (Report
     return report, nil
 }
 
-result, err := patterns.ProcessChain(ctx, cfg, steps, initialReport, processor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, steps, initialReport, processor, nil)
 ```
 
 **Pattern 4: Pure Data Transformation (No Agents)**
@@ -385,7 +385,7 @@ processor := func(ctx context.Context, record Record, summary Summary) (Summary,
     return summary, nil
 }
 
-result, err := patterns.ProcessChain(ctx, cfg, records, Summary{}, processor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, records, Summary{}, processor, nil)
 ```
 
 #### Hub Integration Patterns (Optional Advanced Usage)
@@ -407,7 +407,7 @@ processor := func(ctx context.Context, agentID string, report Report) (Report, e
     return response.Data.(Report), nil
 }
 
-result, err := patterns.ProcessChain(ctx, cfg, agentIDs, initialReport, processor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, agentIDs, initialReport, processor, nil)
 ```
 
 **Pattern 2: Multi-Agent Orchestration Per Step**
@@ -445,7 +445,7 @@ processor := func(ctx context.Context, stepName string, report Report) (Report, 
     return report, nil
 }
 
-result, err := patterns.ProcessChain(ctx, cfg, steps, initialReport, processor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, steps, initialReport, processor, nil)
 ```
 
 **Pattern 3: Cross-Hub Coordination**
@@ -478,7 +478,7 @@ processor := func(ctx context.Context, step Step, state State) (State, error) {
     return state, nil
 }
 
-result, err := patterns.ProcessChain(ctx, cfg, steps, initialState, processor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, steps, initialState, processor, nil)
 ```
 
 **When to Use Hub Integration:**
@@ -536,7 +536,7 @@ Fan-out work to worker pool, collect results, preserve original order despite co
 #### API Design
 
 ```go
-// pkg/patterns/parallel.go
+// pkg/workflows/parallel.go
 
 // ItemProcessor processes a single item concurrently.
 // Multiple processors run in parallel worker pool.
@@ -712,7 +712,7 @@ processor := func(ctx context.Context, question string) (Answer, error) {
 }
 
 // Process all questions concurrently
-answers, err := patterns.ProcessParallel(ctx, cfg, questions, processor, nil)
+answers, err := workflows.ProcessParallel(ctx, cfg, questions, processor, nil)
 ```
 
 **Pattern 2: Concurrent Data Fetching/Processing**
@@ -738,7 +738,7 @@ processor := func(ctx context.Context, url string) (Data, error) {
 }
 
 // Fetch all URLs concurrently
-results, err := patterns.ProcessParallel(ctx, cfg, urls, processor, nil)
+results, err := workflows.ProcessParallel(ctx, cfg, urls, processor, nil)
 ```
 
 **Pattern 3: Multiple Agents, Direct Calls**
@@ -770,7 +770,7 @@ processor := func(ctx context.Context, task AnalysisTask) (Analysis, error) {
 }
 
 // Process all tasks concurrently
-analyses, err := patterns.ProcessParallel(ctx, cfg, tasks, processor, nil)
+analyses, err := workflows.ProcessParallel(ctx, cfg, tasks, processor, nil)
 ```
 
 **Pattern 4: Concurrent Vision Processing**
@@ -799,7 +799,7 @@ processor := func(ctx context.Context, img ImageData) (Description, error) {
 }
 
 // Process all images concurrently
-descriptions, err := patterns.ProcessParallel(ctx, cfg, images, processor, nil)
+descriptions, err := workflows.ProcessParallel(ctx, cfg, images, processor, nil)
 ```
 
 #### Hub Integration Patterns (Optional Advanced Usage)
@@ -821,7 +821,7 @@ processor := func(ctx context.Context, agentID string) (Analysis, error) {
     return response.Data.(Analysis), nil
 }
 
-analyses, err := patterns.ProcessParallel(ctx, cfg, agentIDs, processor, nil)
+analyses, err := workflows.ProcessParallel(ctx, cfg, agentIDs, processor, nil)
 
 // Aggregate results
 finalAnalysis := aggregateAnalyses(analyses)
@@ -840,7 +840,7 @@ processor := func(ctx context.Context, agentID string) (Response, error) {
     return waitForResponse(ctx, hub, agentID, 5*time.Second)
 }
 
-responses, err := patterns.ProcessParallel(ctx, cfg, agentIDs, processor, nil)
+responses, err := workflows.ProcessParallel(ctx, cfg, agentIDs, processor, nil)
 ```
 
 **Pattern 3: Parallel Pub/Sub Distribution**
@@ -856,7 +856,7 @@ processor := func(ctx context.Context, topic string) (PublishResult, error) {
     return PublishResult{Topic: topic, Success: true}, nil
 }
 
-results, err := patterns.ProcessParallel(ctx, cfg, topics, processor, nil)
+results, err := workflows.ProcessParallel(ctx, cfg, topics, processor, nil)
 ```
 
 **When to Use Hub Integration:**
@@ -962,7 +962,7 @@ Evaluate predicates against state, select handler, execute selected path.
 #### API Design
 
 ```go
-// pkg/patterns/conditional.go
+// pkg/workflows/conditional.go
 
 // RoutePredicate evaluates state and returns route decision.
 type RoutePredicate[TState any] func(state TState) (route string, err error)
@@ -1089,7 +1089,7 @@ config := RouteConfig{
     },
 }
 
-result, err := patterns.ProcessConditional(ctx, document, predicate, config)
+result, err := workflows.ProcessConditional(ctx, document, predicate, config)
 ```
 
 **Pattern 2: Processing Pipeline Selection**
@@ -1119,7 +1119,7 @@ config := RouteConfig{
     },
 }
 
-result, err := patterns.ProcessConditional(ctx, data, predicate, config)
+result, err := workflows.ProcessConditional(ctx, data, predicate, config)
 ```
 
 **Pattern 3: Capability-Based Agent Selection**
@@ -1158,7 +1158,7 @@ config := RouteConfig{
     },
 }
 
-result, err := patterns.ProcessConditional(ctx, task, predicate, config)
+result, err := workflows.ProcessConditional(ctx, task, predicate, config)
 ```
 
 **Pattern 4: Confidence-Based Routing**
@@ -1191,7 +1191,7 @@ config := RouteConfig{
     },
 }
 
-result, err := patterns.ProcessConditional(ctx, state, predicate, config)
+result, err := workflows.ProcessConditional(ctx, state, predicate, config)
 ```
 
 #### Hub Integration Patterns (Optional Advanced Usage)
@@ -1228,7 +1228,7 @@ config := RouteConfig{
     },
 }
 
-result, err := patterns.ProcessConditional(ctx, task, predicate, config)
+result, err := workflows.ProcessConditional(ctx, task, predicate, config)
 ```
 
 **Pattern 2: Priority-Based Hub Routing**
@@ -1251,7 +1251,7 @@ config := RouteConfig{
     },
 }
 
-result, err := patterns.ProcessConditional(ctx, message, predicate, config)
+result, err := workflows.ProcessConditional(ctx, message, predicate, config)
 ```
 
 **When to Use Hub Integration:**
@@ -1837,7 +1837,7 @@ analysisChain := func(ctx context.Context, state state.State) (state.State, erro
         return response.Data.(Document), err
     }
     
-    result, err := patterns.ProcessChain(ctx, patterns.DefaultChainConfig(), analysts, document, processor, nil)
+    result, err := workflows.ProcessChain(ctx, workflows.DefaultChainConfig(), analysts, document, processor, nil)
     if err != nil {
         return state, err
     }
@@ -1858,7 +1858,7 @@ parallelReview := func(ctx context.Context, state state.State) (state.State, err
         return response.Data.(Review), err
     }
     
-    reviews, err := patterns.ProcessParallel(ctx, patterns.DefaultParallelConfig(), reviewers, processor, nil)
+    reviews, err := workflows.ProcessParallel(ctx, workflows.DefaultParallelConfig(), reviewers, processor, nil)
     if err != nil {
         return state, err
     }
@@ -1880,8 +1880,8 @@ approvalRouting := func(ctx context.Context, state state.State) (state.State, er
         return "revision", nil
     }
     
-    config := patterns.RouteConfig{
-        Routes: map[string]patterns.RouteHandler{
+    config := workflows.RouteConfig{
+        Routes: map[string]workflows.RouteHandler{
             "final-approval": func(ctx context.Context, _ Review) (Review, error) {
                 response, err := hub.Request(ctx, "coordinator", "approver", state)
                 return response.Data.(Review), err
@@ -1892,7 +1892,7 @@ approvalRouting := func(ctx context.Context, state state.State) (state.State, er
         },
     }
     
-    result, err := patterns.ProcessConditional(ctx, Review{}, predicate, config)
+    result, err := workflows.ProcessConditional(ctx, Review{}, predicate, config)
     if err != nil {
         return state, err
     }
@@ -1943,7 +1943,7 @@ func ParallelNode[TItem, TResult any](
 // Helper: Create state node from conditional routing
 func ConditionalNode(
     predicate patterns.RoutePredicate[state.State],
-    config patterns.RouteConfig[state.State],
+    config workflows.RouteConfig[state.State],
 ) state.StateNode
 ```
 
@@ -2024,7 +2024,7 @@ processor := func(ctx context.Context, item Item, current State) (State, error) 
 node := state.NewFunctionNode(func(ctx context.Context, state state.State) (state.State, error) {
     items, _ := state.Get("items").([]Item)
     
-    results, err := patterns.ProcessParallel(ctx, cfg, items, processor, nil)
+    results, err := workflows.ProcessParallel(ctx, cfg, items, processor, nil)
     if err != nil {
         return state, err
     }
@@ -2044,7 +2044,7 @@ chainProcessor := func(ctx context.Context, stage string, state State) (State, e
     agents := getAgentsForStage(stage)
     
     // Parallel execution within sequential step
-    results, err := patterns.ProcessParallel(ctx, cfg, agents, agentProcessor, nil)
+    results, err := workflows.ProcessParallel(ctx, cfg, agents, agentProcessor, nil)
     if err != nil {
         return state, err
     }
@@ -2053,7 +2053,7 @@ chainProcessor := func(ctx context.Context, stage string, state State) (State, e
 }
 
 stages := []string{"analysis", "review", "approval"}
-result, err := patterns.ProcessChain(ctx, cfg, stages, initialState, chainProcessor, nil)
+result, err := workflows.ProcessChain(ctx, cfg, stages, initialState, chainProcessor, nil)
 ```
 
 **Example 2: State Graph with Pattern Nodes**
@@ -2094,14 +2094,14 @@ complexHandler := func(ctx context.Context, state State) (State, error) {
     return handlerGraph.Execute(ctx, state)
 }
 
-config := patterns.RouteConfig{
-    Routes: map[string]patterns.RouteHandler{
+config := workflows.RouteConfig{
+    Routes: map[string]workflows.RouteHandler{
         "complex": complexHandler,
         "simple": simpleHandler,
     },
 }
 
-result, err := patterns.ProcessConditional(ctx, state, predicate, config)
+result, err := workflows.ProcessConditional(ctx, state, predicate, config)
 ```
 
 ---
@@ -2219,7 +2219,7 @@ Phase 8: Observability Implementation
 
 ```
 tests/
-├── patterns/
+├── workflows/
 │   ├── chain_test.go       # Sequential chain tests
 │   ├── parallel_test.go    # Parallel execution tests
 │   └── conditional_test.go # Conditional routing tests
@@ -2229,9 +2229,9 @@ tests/
 │   ├── graph_test.go       # Graph execution tests
 │   └── checkpoint_test.go  # Checkpointing tests
 └── integration/
-    ├── patterns_state_test.go  # Pattern + state graph integration
-    ├── hub_patterns_test.go    # Hub + patterns integration
-    └── workflow_test.go        # End-to-end workflow tests
+    ├── workflows_state_test.go  # Workflow + state graph integration
+    ├── hub_workflows_test.go    # Hub + workflows integration
+    └── workflow_test.go         # End-to-end workflow tests
 ```
 
 ### Test Coverage Requirements
@@ -2380,10 +2380,10 @@ tests/
 
 1. **Create Track B package structure:**
    ```bash
-   mkdir -p pkg/patterns
-   touch pkg/patterns/doc.go
-   touch pkg/patterns/chain.go
-   touch tests/patterns/chain_test.go
+   mkdir -p pkg/workflows
+   touch pkg/workflows/doc.go
+   touch pkg/workflows/chain.go
+   touch tests/workflows/chain_test.go
    ```
 
 2. **Extract sequential chain from classify-docs:**
