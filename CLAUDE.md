@@ -101,6 +101,15 @@ Context documents fall into two categories:
   - **Feature Phase**: Add new capabilities on the prepared foundation
   - This prevents mixing layout changes with feature additions, reducing complexity and debugging difficulty
 - Focus: Concrete implementation steps, file-by-file changes, code examples for actual modifications needed
+- **Code Block Standards**:
+  - **No comments in code blocks**: Omit all comments to minimize token usage and avoid comment maintenance overhead
+  - Code should be self-documenting through clear naming and structure
+  - Explanatory text belongs outside code blocks, not as inline comments
+- **Testing and Documentation Exclusion**:
+  - Implementation guides provide source code implementation steps only
+  - Testing infrastructure is Claude's responsibility after user completes implementation
+  - Code documentation (godoc comments) is Claude's responsibility after implementation
+  - Guides may reference testing strategies but should not include test implementation
 - Conclusion: Future extensibility examples separate from core implementation steps
 
 **Development Summaries**: Historical documentation capturing completed development efforts
