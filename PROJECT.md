@@ -115,78 +115,223 @@ Following go-agents patterns:
 **Example:**
 - `examples/phase-01-hubs`: ISS Maintenance EVA scenario demonstrating all communication patterns with 4 agents across 2 hubs
 
-### Phase 2: State Management
+### Phase 2: State Graph Core Infrastructure
 
-**Goal**: LangGraph-inspired state graph execution engine.
+**Goal**: Establish state management primitives and observability foundation.
+
+**Estimated Time**: 8-10 hours
 
 **Packages:**
-- `state/`: StateGraph, StateNode, Edge, Executor, Checkpoint
+- `observability/`: Observer interface, Event structures, EventType constants
+- `state/`: State type, StateNode interface, Edge, StateGraph interface
 
 **Features:**
-- State graph definitions (nodes, edges, transitions)
-- Transition predicates for conditional routing
-- State execution engine
-- Checkpointing for recovery
-- Cycle detection and handling
+- Minimal observability interfaces for event emission
+- State type with immutable operations (Clone, Get, Set, Merge)
+- StateNode interface defining computation steps
+- Edge types with transition predicates
+- StateGraph interface for workflow definition
+- Observer integration in all state operations
 
 **Integration:**
-- State graph nodes CAN use hub for coordination
-- State graphs execute independently of hubs
-- Nodes can be LLM agents, hub agents, or pure functions
+- Direct go-agents usage (primary pattern)
+- Optional hub coordination
+- Observer hooks for state changes
+- NoOpObserver for optional observability
 
 **Success Criteria:**
-- State graphs execute with correct state transitions
-- Checkpointing enables recovery from failures
-- Integration with hub messaging works
-- Graph execution is type-safe and testable
+- State operations work with immutability
+- Observer receives events for state mutations
+- StateNode contract is clear and minimal
+- Edge predicates evaluate correctly
+- Foundation established for graph execution and patterns
+- Tests achieve 80%+ coverage
 
-### Phase 3: Workflow Patterns
+### Phase 3: State Graph Execution Engine
 
-**Goal**: High-level workflow compositions built on state graphs.
+**Goal**: Implement graph executor with cycle detection and conditional routing.
 
-**Packages:**
-- `patterns/`: Chain, Parallel, Conditional, Stateful
-
-**Patterns:**
-- **Sequential chains**: Linear workflows with state accumulation
-- **Parallel execution**: Fan-out/fan-in with state merge
-- **Conditional routing**: State-based routing decisions
-- **Stateful workflows**: Complex state machines with cycles
-
-**Integration:**
-- Patterns use state graphs + hub messaging
-- Composable pattern building blocks
-- Declarative workflow construction
-
-**Success Criteria:**
-- All workflow patterns implemented and tested
-- Patterns compose correctly
-- Examples demonstrate real-world usage
-- Documentation covers common patterns
-
-### Phase 4: Observability
-
-**Goal**: Production-grade observability without performance degradation.
+**Estimated Time**: 8-10 hours
 
 **Packages:**
-- `observability/`: Trace, Metrics, Decision logging
+- `state/`: Executor, cycle detection, iteration limits
 
 **Features:**
-- Execution trace capture across workflows
-- Decision point logging with reasoning
-- Confidence scoring utilities
+- Graph execution algorithm with node traversal
+- Linear path execution (A → B → C)
+- Conditional routing via predicates
+- Cycle detection and max iterations protection
+- Context cancellation support
+- Observer hooks for node execution and edge transitions
+
+**Integration:**
+- Executes state graphs from Phase 2
+- Nodes can use direct go-agents calls or hub coordination
+- Full observability of execution flow
+
+**Success Criteria:**
+- Linear and conditional graphs execute correctly
+- Cycle detection prevents infinite loops
+- Context cancellation stops execution immediately
+- Error propagation works correctly
+- Observer captures all execution events
+- Tests achieve 80%+ coverage
+
+### Phase 4: Sequential Chains Pattern
+
+**Goal**: Extract and generalize sequential chain pattern from classify-docs.
+
+**Estimated Time**: 6-7 hours
+
+**Packages:**
+- `patterns/`: Chain pattern, ChainConfig, ChainResult
+
+**Features:**
+- Generic sequential chain with state accumulation
+- Extract from `classify-docs/pkg/processing/sequential.go`
+- ChainConfig for intermediate state capture and fail-fast
+- Progress callbacks for monitoring
+- Observer hooks for step completion
+
+**Integration:**
+- Works with any TContext type (including State from Phase 2)
+- Direct go-agents usage (no hub required)
+- Optional hub coordination for multi-agent steps
+- Observer integration for chain events
+
+**Success Criteria:**
+- Pattern extracted and generalized successfully
+- Works with multiple context types
+- State type works naturally as TContext
+- Hub integration is optional
+- Tests demonstrate various usage patterns
+- Tests achieve 80%+ coverage
+
+### Phase 5: Parallel Execution Pattern
+
+**Goal**: Implement concurrent processing with result aggregation.
+
+**Estimated Time**: 7-9 hours
+
+**Packages:**
+- `patterns/`: Parallel pattern, ParallelConfig, worker pool
+
+**Features:**
+- Port architecture from classify-docs git history (commit d97ab1c^)
+- Worker pool with auto-detection (NumCPU * 2, capped)
+- Order preservation through indexed results
+- Background result collector (deadlock prevention)
+- Fail-fast error handling with context cancellation
+- Observer hooks for worker events
+
+**Integration:**
+- Direct go-agents usage for concurrent agent calls
+- Optional hub coordination for agent routing
+- Composable with sequential chains
+- Observer integration for parallel events
+
+**Success Criteria:**
+- Worker pool scales correctly
+- Result order preserved despite concurrent execution
+- No deadlocks under stress testing
+- Context cancellation stops all workers
+- Hub integration is optional
+- Tests achieve 80%+ coverage
+
+### Phase 6: Checkpointing Infrastructure
+
+**Goal**: Add production-grade recovery capability to state graphs.
+
+**Estimated Time**: 5-6 hours
+
+**Packages:**
+- `state/`: Checkpoint, CheckpointStore, MemoryCheckpointStore
+
+**Features:**
+- Checkpoint structures capturing graph position and state
+- CheckpointStore interface for persistence
+- Memory-based checkpoint store implementation
+- ExecuteWithCheckpoints for automatic checkpointing
+- Resume function for recovery from checkpoint
+- Observer hooks for checkpoint events
+
+**Integration:**
+- Extends state graph execution from Phase 3
+- Checkpoint intervals configurable
+- Optional feature (doesn't block patterns)
+- Observer integration for checkpoint lifecycle
+
+**Success Criteria:**
+- Checkpoints capture state correctly
+- Resume continues from correct position
+- Checkpoint intervals work as configured
+- Memory store handles concurrent access
+- Observer captures checkpoint events
+- Tests achieve 80%+ coverage
+
+### Phase 7: Conditional Routing + Integration
+
+**Goal**: Complete pattern suite and validate composition.
+
+**Estimated Time**: 7-10 hours
+
+**Packages:**
+- `patterns/`: Conditional routing pattern, integration helpers
+
+**Features:**
+- Conditional routing with predicate-based handler selection
+- Integration helpers (ChainNode, ParallelNode, ConditionalNode)
+- Pattern composition within state graphs
+- State graphs using patterns as node implementations
+- Stateful workflow examples
+- Observer hooks for routing decisions
+
+**Integration:**
+- Patterns compose with state graphs
+- State graphs use patterns as nodes
+- Patterns can use state graphs internally
+- Full observability of composed workflows
+
+**Success Criteria:**
+- Conditional routing pattern implemented
+- All patterns compose correctly
+- State graphs can use patterns as nodes
+- Patterns can use state graphs for complex logic
+- Integration helpers simplify composition
+- Comprehensive stateful workflow examples
+- Tests achieve 80%+ coverage
+
+### Phase 8: Observability Implementation
+
+**Goal**: Implement full observability infrastructure on integrated observer foundation.
+
+**Estimated Time**: 6-8 hours
+
+**Packages:**
+- `observability/`: Structured logging, metrics aggregation, trace correlation
+
+**Features:**
+- Implement Observer interface with production features
+- Structured logging adapter (slog integration)
+- Metrics aggregation and reporting
+- Execution trace correlation across workflows
+- Decision point logging with reasoning capture
 - Performance metrics (latency, token usage, retries)
+- Confidence scoring utilities
 
 **Integration:**
-- Cross-cutting hooks in hub, state, patterns
+- Leverages observer hooks from Phases 2-7
 - Minimal performance overhead
-- Optional (can be disabled)
+- Optional (can be disabled via NoOpObserver)
+- Works across all orchestration primitives
 
 **Success Criteria:**
-- Comprehensive tracing without degrading performance
+- Comprehensive tracing without performance degradation
 - Metrics provide production debugging insights
 - Decision logging captures reasoning
+- Confidence scoring is accurate and useful
 - Observability can be toggled on/off
+- Tests achieve 80%+ coverage
 
 ## Success Criteria
 
@@ -213,7 +358,7 @@ The go-agents-orchestration package is successful when:
 ### Release Candidate (v1.0.0-rc.x)
 
 - API stabilized
-- All four phases complete
+- All eight phases complete
 - Documentation complete
 - Test coverage meets requirements
 
