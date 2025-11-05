@@ -45,9 +45,13 @@ This package is under active development and follows pre-release versioning (v0.
 
 **Development Phases:**
 - **Phase 1**: Foundation (messaging + hub coordination) - ✅ **Complete**
-- **Phase 2**: State graph execution - Planned
-- **Phase 3**: Workflow patterns - Planned
-- **Phase 4**: Observability infrastructure - Planned
+- **Phase 2**: State management core infrastructure - ✅ **Complete**
+- **Phase 3**: State graph execution engine - ✅ **Complete**
+- **Phase 4**: Sequential chains pattern - Planned
+- **Phase 5**: Parallel execution pattern - Planned
+- **Phase 6**: Checkpointing infrastructure - Planned
+- **Phase 7**: Conditional routing + integration - Planned
+- **Phase 8**: Observability implementation - Planned
 
 ## Documentation
 

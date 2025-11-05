@@ -11,23 +11,28 @@ This document specifies the technical architecture of go-agents-orchestration, a
 Packages are organized in a strict dependency hierarchy (bottom-up):
 
 ```
+Level 0: observability/     # Observer pattern (no dependencies)
+    ↓
 Level 1: messaging/          # Message primitives (no dependencies)
     ↓
 Level 2: hub/               # Agent coordination (depends on messaging)
     ↓
-Level 3: state/             # State graph execution (depends on messaging)
+Level 3: state/             # State graph execution (depends on observability)
     ↓
 Level 4: patterns/          # Workflow patterns (depends on hub + state)
-    ↓
-Level 5: observability/     # Cross-cutting metrics (depends on all)
 ```
 
-**Rationale**: Lower layers cannot import higher layers. This prevents circular dependencies and ensures each layer can be validated independently.
+**Rationale**: Lower layers cannot import higher layers. This prevents circular dependencies and ensures each layer can be validated independently. Observability at Level 0 enables all layers to integrate observer pattern.
 
 ### Package Organization
 
 ```
 github.com/JaimeStill/go-agents-orchestration/
+├── observability/          # Level 0: Observer pattern
+│   ├── observer.go         # Observer interface and Event
+│   ├── registry.go         # Observer registry
+│   └── doc.go             # Package documentation
+│
 ├── messaging/              # Level 1: Message primitives
 │   ├── message.go          # Message structure and helpers
 │   ├── builder.go          # Fluent message builders
@@ -42,26 +47,25 @@ github.com/JaimeStill/go-agents-orchestration/
 │   └── metrics.go          # Hub metrics
 │
 ├── config/                 # Configuration structures
-│   └── hub.go              # HubConfig with go-agents integration
+│   ├── hub.go              # HubConfig
+│   └── state.go            # GraphConfig
 │
-├── state/                  # Level 3: State graph execution (Phase 2)
-│   ├── graph.go            # StateGraph interface
-│   ├── node.go             # StateNode interface
-│   ├── edge.go             # Edge and transition logic
-│   ├── state.go            # State structure
-│   ├── executor.go         # Graph execution engine
-│   └── checkpoint.go       # State checkpointing
+├── state/                  # Level 3: State graph execution
+│   ├── state.go            # State type with immutable operations
+│   ├── node.go             # StateNode interface and FunctionNode
+│   ├── edge.go             # Edge and transition predicates
+│   ├── graph.go            # StateGraph interface and implementation
+│   ├── error.go            # ExecutionError type
+│   └── doc.go             # Package documentation
 │
-├── patterns/               # Level 4: Workflow patterns (Phase 3)
+├── patterns/               # Level 4: Workflow patterns (Phase 4-5)
 │   ├── chain.go            # Sequential chains
 │   ├── parallel.go         # Parallel execution
 │   ├── conditional.go      # Conditional routing
 │   └── stateful.go         # Stateful workflows
 │
-└── observability/          # Level 5: Cross-cutting (Phase 4)
-    ├── trace.go            # Execution tracing
-    ├── metrics.go          # Metrics collection
-    └── decision.go         # Decision logging
+└── examples/               # Integration examples
+    └── phase-01-hubs/      # Hub coordination example
 ```
 
 ## Phase 1: Foundation (Completed)
@@ -361,7 +365,7 @@ func DefaultHubConfig() HubConfig {
 3. Runtime behavior depends on initialized state
 4. Configuration does not persist beyond initialization
 
-## Phase 2: State Management (Planned)
+## Phase 2-3: State Management (Completed)
 
 ### state Package
 
@@ -372,18 +376,20 @@ func DefaultHubConfig() HubConfig {
 - **StateGraph**: Workflow definition with nodes and edges
 - **StateNode**: Computation step that receives and returns state
 - **Edge**: Transition between nodes with optional predicates
-- **State**: Data flowing through the graph
+- **State**: Data flowing through the graph (map[string]any)
 - **Executor**: Engine that executes state graph transitions
-- **Checkpoint**: State snapshot for recovery
+- **ExecutionError**: Rich error context for debugging
 
-**Planned Interfaces:**
+**Core Interfaces:**
 
 ```go
 // StateGraph defines a workflow as a graph of nodes and edges
 type StateGraph interface {
+    Name() string
     AddNode(name string, node StateNode) error
     AddEdge(from, to string, predicate TransitionPredicate) error
     SetEntryPoint(node string) error
+    SetExitPoint(node string) error
     Execute(ctx context.Context, initialState State) (State, error)
 }
 
@@ -393,15 +399,62 @@ type StateNode interface {
 }
 
 // State represents data flowing through the graph
-type State map[string]any
+type State struct {
+    data     map[string]any
+    observer observability.Observer
+}
 
 // TransitionPredicate determines which edge to follow
 type TransitionPredicate func(state State) bool
+
+// ExecutionError captures rich context when graph execution fails
+type ExecutionError struct {
+    NodeName string
+    State    State
+    Path     []string
+    Err      error
+}
 ```
+
+**State Operations:**
+
+- `New(observer)` - Create new state with observer
+- `Clone()` - Deep copy state
+- `Get(key)` - Retrieve value with existence check
+- `Set(key, value)` - Create new state with updated value
+- `Merge(other)` - Combine states (immutable)
+
+**Graph Execution:**
+
+Phase 3 implementation provides complete execution engine:
+
+1. **Graph Construction**: Build workflow with nodes and edges
+2. **Validation**: Ensure structure completeness before execution
+3. **Execution**: Traverse graph from entry to exit point
+4. **Cycle Detection**: Track visit counts, emit events on revisits
+5. **Max Iterations**: Prevent infinite loops (configurable limit)
+6. **Observer Integration**: Emit events at all execution milestones
+7. **Error Context**: Capture full execution state on failure
+
+**Execution Features:**
+
+- Linear path execution (A → B → C)
+- Conditional routing via predicates
+- Multiple exit points (success/failure paths)
+- Context cancellation propagation
+- Full execution path tracking
+- Rich error context for debugging
+
+**Observer Events:**
+
+- `EventGraphStart` / `EventGraphComplete`
+- `EventNodeStart` / `EventNodeComplete`
+- `EventEdgeEvaluate` / `EventEdgeTransition`
+- `EventCycleDetected`
 
 **Integration with Hub:**
 
-State graph nodes CAN use hub for agent coordination:
+State graph nodes can use hub for agent coordination:
 
 ```go
 // Hub node that requests agent processing
@@ -412,15 +465,107 @@ type HubNode struct {
 }
 
 func (n *HubNode) Execute(ctx context.Context, state State) (State, error) {
-    response, err := n.hub.Request(ctx, n.fromAgent, n.toAgent, state["data"])
+    data, _ := state.Get("data")
+    response, err := n.hub.Request(ctx, n.fromAgent, n.toAgent, data)
     if err != nil {
-        return nil, err
+        return state, err
     }
 
-    state["result"] = response.Data
-    return state, nil
+    return state.Set("result", response.Data), nil
 }
 ```
+
+**Implementation Status:**
+
+Phase 2-3 implementation is complete:
+- State type with immutable operations
+- StateNode interface and FunctionNode
+- Edge with transition predicates (AlwaysTransition, KeyExists, KeyEquals, Not, And, Or)
+- StateGraph interface and concrete implementation
+- Graph execution engine with cycle detection
+- ExecutionError with rich context
+- Observer integration throughout
+- Test coverage: 95.6% (exceeds 80% requirement)
+
+### observability Package
+
+**Purpose**: Minimal observer pattern for zero-overhead execution telemetry.
+
+**Core Types:**
+
+```go
+// Observer receives execution events
+type Observer interface {
+    OnEvent(ctx context.Context, event Event)
+}
+
+// Event represents an observable occurrence
+type Event struct {
+    Type      EventType
+    Timestamp time.Time
+    Source    string
+    Data      map[string]any
+}
+
+// NoOpObserver provides zero-cost implementation
+type NoOpObserver struct{}
+```
+
+**Observer Registry:**
+
+```go
+func GetObserver(name string) (Observer, error)
+func RegisterObserver(name string, observer Observer)
+```
+
+**Event Types Defined:**
+
+- Phase 2-3: State operations and graph execution
+- Phase 4-5: Workflow patterns
+- Phase 6: Checkpointing
+- Phase 7: Conditional routing
+- Phase 8: Full observability implementation
+
+**Implementation Status:**
+
+Observability infrastructure is complete:
+- Observer interface and Event structure
+- Registry for configuration-driven selection
+- NoOpObserver for zero overhead
+- EventType constants for all phases
+- Event.Data contains metadata (not application data)
+- Test coverage: 100%
+
+### config Package
+
+**Purpose**: Configuration structures for orchestration primitives.
+
+**Configuration Structures:**
+
+```go
+// HubConfig defines configuration for a Hub instance
+type HubConfig struct {
+    Name              string
+    ChannelBufferSize int
+    DefaultTimeout    time.Duration
+    Logger            *slog.Logger
+}
+
+// GraphConfig defines configuration for state graphs
+type GraphConfig struct {
+    Name          string
+    Observer      string
+    MaxIterations int
+}
+```
+
+**Implementation Status:**
+
+Configuration package is complete:
+- HubConfig (Phase 1)
+- GraphConfig (Phase 2)
+- Default configuration functions
+- Test coverage: 100%
 
 ## Phase 3: Workflow Patterns (Planned)
 
