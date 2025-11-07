@@ -1,11 +1,15 @@
 package observability
 
-import "fmt"
+import (
+	"fmt"
+	"log/slog"
+)
 
 // observers registry maps observer names to implementations.
 // Initialized with "noop" observer for zero-overhead observability.
 var observers = map[string]Observer{
 	"noop": NoOpObserver{},
+	"slog": NewSlogObserver(slog.Default()),
 }
 
 // GetObserver retrieves a registered observer by name.

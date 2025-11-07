@@ -24,7 +24,7 @@ import (
 //
 //   - ctx: Context for cancellation and timeout control
 //   - item: The current item to process
-//   - current: The accumulated state from all previous steps
+//   - state: The accumulated state from all previous steps
 //
 // Returns:
 //
@@ -44,30 +44,8 @@ import (
 type StepProcessor[TItem, TContext any] func(
 	ctx context.Context,
 	item TItem,
-	current TContext,
+	state TContext,
 ) (TContext, error)
-
-// ProgressFunc provides visibility into chain execution progress.
-//
-// Called after each successful step completion. Not called before the first
-// step or when errors occur. Useful for progress bars, logging, or monitoring.
-//
-// Parameters:
-//
-//   - completed: Number of steps completed so far (1-indexed)
-//   - total: Total number of steps in the chain
-//   - current: Current accumulated state snapshot
-//
-// Example:
-//
-//	progress := func(completed, total int, state State) {
-//	    fmt.Printf("Progress: %d/%d\n", completed, total)
-//	}
-type ProgressFunc[TContext any] func(
-	completed int,
-	total int,
-	current TContext,
-)
 
 // ChainResult contains the results of chain execution.
 //
@@ -212,14 +190,14 @@ func ProcessChain[TItem, TContext any](
 		intermediate = append(intermediate, initial)
 	}
 
-	current := initial
+	state := initial
 
 	for i, item := range items {
 		if err := ctx.Err(); err != nil {
 			chainErr := &ChainError[TItem, TContext]{
 				StepIndex: i,
 				Item:      item,
-				State:     current,
+				State:     state,
 				Err:       fmt.Errorf("processing cancelled: %w", err),
 			}
 			observer.OnEvent(ctx, observability.Event{
@@ -245,12 +223,12 @@ func ProcessChain[TItem, TContext any](
 			},
 		})
 
-		updated, err := processor(ctx, item, current)
+		updated, err := processor(ctx, item, state)
 		if err != nil {
 			chainErr := &ChainError[TItem, TContext]{
 				StepIndex: i,
 				Item:      item,
-				State:     current,
+				State:     state,
 				Err:       err,
 			}
 			observer.OnEvent(ctx, observability.Event{
@@ -276,10 +254,10 @@ func ProcessChain[TItem, TContext any](
 			return result, chainErr
 		}
 
-		current = updated
+		state = updated
 
 		if cfg.CaptureIntermediateStates {
-			intermediate = append(intermediate, current)
+			intermediate = append(intermediate, state)
 		}
 
 		observer.OnEvent(ctx, observability.Event{
@@ -294,11 +272,11 @@ func ProcessChain[TItem, TContext any](
 		})
 
 		if progress != nil {
-			progress(i+1, len(items), current)
+			progress(i+1, len(items), state)
 		}
 	}
 
-	result.Final = current
+	result.Final = state
 	result.Intermediate = intermediate
 	result.Steps = len(items)
 

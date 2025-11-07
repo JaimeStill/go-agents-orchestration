@@ -38,7 +38,7 @@ type GraphConfig struct {
 func DefaultGraphConfig(name string) GraphConfig {
 	return GraphConfig{
 		Name:          name,
-		Observer:      "noop",
+		Observer:      "slog",
 		MaxIterations: 1000,
 	}
 }

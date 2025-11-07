@@ -48,7 +48,7 @@ This package is under active development and follows pre-release versioning (v0.
 - **Phase 2**: State management core infrastructure - ✅ **Complete**
 - **Phase 3**: State graph execution engine - ✅ **Complete**
 - **Phase 4**: Sequential chains pattern - ✅ **Complete**
-- **Phase 5**: Parallel execution pattern - Planned
+- **Phase 5**: Parallel execution pattern + SlogObserver - ✅ **Complete**
 - **Phase 6**: Checkpointing infrastructure - Planned
 - **Phase 7**: Conditional routing + integration - Planned
 - **Phase 8**: Observability implementation - Planned
@@ -146,5 +146,90 @@ h.Broadcast(ctx, fromAgentID, data) // Sends to all except sender
 ```go
 h.Subscribe(agentID, "topic-name")
 h.Publish(ctx, fromAgentID, "topic-name", data) // Sender filtered out
+```
+
+## Workflow Patterns
+
+### Sequential Chain (Phase 4)
+
+Process items sequentially with state accumulation:
+
+```go
+import (
+    "github.com/JaimeStill/go-agents-orchestration/pkg/config"
+    "github.com/JaimeStill/go-agents-orchestration/pkg/workflows"
+)
+
+type Conversation struct {
+    Exchanges []Exchange
+}
+
+questions := []string{"What is AI?", "What is ML?", "What is DL?"}
+initial := Conversation{}
+
+processor := func(ctx context.Context, question string, conv Conversation) (Conversation, error) {
+    response, err := agent.Chat(ctx, question)
+    if err != nil {
+        return conv, err
+    }
+    conv.Exchanges = append(conv.Exchanges, Exchange{Question: question, Answer: response.Content()})
+    return conv, nil
+}
+
+cfg := config.DefaultChainConfig()
+result, err := workflows.ProcessChain(ctx, cfg, questions, initial, processor, nil)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### Parallel Execution (Phase 5)
+
+Process items concurrently with worker pool:
+
+```go
+questions := []string{"What is AI?", "What is ML?", "What is DL?", "What is NLP?"}
+
+processor := func(ctx context.Context, question string) (string, error) {
+    response, err := agent.Chat(ctx, question)
+    if err != nil {
+        return "", err
+    }
+    return response.Content(), nil
+}
+
+cfg := config.DefaultParallelConfig() // Auto-detects worker count
+result, err := workflows.ProcessParallel(ctx, cfg, questions, processor, nil)
+if err != nil {
+    log.Fatal(err) // Returns error in fail-fast mode
+}
+
+for i, answer := range result.Results {
+    fmt.Printf("Q: %s\nA: %s\n\n", questions[i], answer)
+}
+```
+
+### Collect-All-Errors Mode
+
+Continue processing all items despite errors:
+
+```go
+cfg := config.ParallelConfig{
+    FailFast: false, // Continue processing all items
+    Observer: "slog", // Structured logging
+}
+
+result, err := workflows.ProcessParallel(ctx, cfg, items, processor, nil)
+if err != nil {
+    log.Fatal("All items failed")
+}
+
+// Check for partial failures
+if len(result.Errors) > 0 {
+    fmt.Printf("%d items succeeded, %d failed\n", len(result.Results), len(result.Errors))
+    for _, taskErr := range result.Errors {
+        log.Printf("Item %d failed: %v", taskErr.Index, taskErr.Err)
+    }
+}
 ```
 

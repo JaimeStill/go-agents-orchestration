@@ -35,6 +35,70 @@ type ChainConfig struct {
 func DefaultChainConfig() ChainConfig {
 	return ChainConfig{
 		CaptureIntermediateStates: false,
-		Observer:                  "noop",
+		Observer:                  "slog",
+	}
+}
+
+// ParallelConfig defines configuration for parallel execution pattern.
+//
+// This configuration controls worker pool sizing, error handling behavior, and
+// observability for concurrent item processing. The configuration follows the
+// go-agents pattern: used only during initialization, then transformed into
+// domain objects.
+//
+// Worker Pool Sizing:
+//   - MaxWorkers = 0: Auto-detect based on runtime.NumCPU() * 2, capped by WorkerCap
+//   - MaxWorkers > 0: Use exact worker count, ignoring auto-detection
+//   - WorkerCap: Maximum workers for auto-detection (prevents excessive goroutines)
+//
+// Error Handling:
+//   - FailFast = true: Stop processing on first error, cancel all workers
+//   - FailFast = false: Continue processing all items, collect all errors
+//
+// Example JSON:
+//
+//	{
+//	  "max_workers": 4,
+//	  "worker_cap": 16,
+//	  "fail_fast": true,
+//	  "observer": "slog"
+//	}
+//
+// Example usage:
+//
+//	var cfg config.ParallelConfig
+//	json.Unmarshal(data, &cfg)
+//	result, err := workflows.ProcessParallel(ctx, cfg, items, processor, progress)
+type ParallelConfig struct {
+	// MaxWorkers specifies exact worker pool size (0 = auto-detect)
+	MaxWorkers int `json:"max_workers"`
+
+	// WorkerCap limits auto-detected workers (default: 16)
+	WorkerCap int `json:"worker_cap"`
+
+	// FailFast stops on first error when true (default: true)
+	FailFast bool `json:"fail_fast"`
+
+	// Observer specifies which observer implementation to use ("noop", "slog", etc.)
+	Observer string `json:"observer"`
+}
+
+// DefaultParallelConfig returns sensible defaults for parallel execution.
+//
+// Default configuration:
+//   - MaxWorkers: 0 (auto-detect: min(NumCPU*2, WorkerCap, len(items)))
+//   - WorkerCap: 16 (reasonable limit for I/O-bound work like agent API calls)
+//   - FailFast: true (stop on first error for fast failure detection)
+//   - Observer: "slog" (practical observability during development)
+//
+// The worker pool auto-detection balances concurrency with resource usage.
+// For CPU-bound work, consider setting MaxWorkers to runtime.NumCPU().
+// For I/O-bound work (agent API calls), the 2x multiplier provides good throughput.
+func DefaultParallelConfig() ParallelConfig {
+	return ParallelConfig{
+		MaxWorkers: 0,
+		WorkerCap:  16,
+		FailFast:   true,
+		Observer:   "slog",
 	}
 }
