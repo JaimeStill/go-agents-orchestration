@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/JaimeStill/go-agents-orchestration/pkg/observability"
+	"github.com/google/uuid"
 )
 
 // State represents immutable workflow state flowing through graph execution.
@@ -17,8 +18,23 @@ import (
 // Observer integration is built-in from Phase 2, enabling production-grade
 // observability without retrofit friction in later phases.
 type State struct {
-	data     map[string]any
-	observer observability.Observer
+	data           map[string]any
+	observer       observability.Observer
+	runID          string
+	checkpointNode string
+	timestamp      time.Time
+}
+
+func (s State) RunID() string {
+	return s.runID
+}
+
+func (s State) CheckpointNode() string {
+	return s.checkpointNode
+}
+
+func (s State) Timestamp() time.Time {
+	return s.timestamp
 }
 
 // New creates a new empty State with the given observer.
@@ -37,13 +53,15 @@ func New(observer observability.Observer) State {
 	}
 
 	s := State{
-		data:     make(map[string]any),
-		observer: observer,
+		data:      make(map[string]any),
+		observer:  observer,
+		runID:     uuid.New().String(),
+		timestamp: time.Now(),
 	}
 
 	observer.OnEvent(context.Background(), observability.Event{
 		Type:      observability.EventStateCreate,
-		Timestamp: time.Now(),
+		Timestamp: s.timestamp,
 		Source:    "state",
 		Data:      map[string]any{},
 	})
@@ -66,8 +84,11 @@ func New(observer observability.Observer) State {
 //	// original still has "value", cloned has "modified"
 func (s State) Clone() State {
 	newState := State{
-		data:     maps.Clone(s.data),
-		observer: s.observer,
+		data:           maps.Clone(s.data),
+		observer:       s.observer,
+		runID:          s.runID,
+		checkpointNode: s.checkpointNode,
+		timestamp:      s.timestamp,
 	}
 
 	s.observer.OnEvent(context.Background(), observability.Event{
@@ -124,6 +145,13 @@ func (s State) Set(key string, value any) State {
 	return newState
 }
 
+func (s State) SetCheckpointNode(node string) State {
+	newState := s.Clone()
+	newState.checkpointNode = node
+	newState.timestamp = time.Now()
+	return newState
+}
+
 // Merge creates a new State combining this State with another State.
 //
 // Keys from the other State are copied into the new State, overwriting any
@@ -151,4 +179,8 @@ func (s State) Merge(other State) State {
 	})
 
 	return newState
+}
+
+func (s State) Checkpoint(store CheckpointStore) error {
+	return store.Save(s)
 }

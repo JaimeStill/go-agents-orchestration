@@ -1,5 +1,19 @@
 package config
 
+type CheckpointConfig struct {
+	Store    string `json:"store"`
+	Interval int    `json:"interval"`
+	Preserve bool   `json:"preserve"`
+}
+
+func DefaultCheckpointConfig() CheckpointConfig {
+	return CheckpointConfig{
+		Store:    "memory",
+		Interval: 0,
+		Preserve: false,
+	}
+}
+
 // GraphConfig defines configuration for state graph execution.
 //
 // This configuration follows the go-agents pattern: used only during initialization,
@@ -28,7 +42,8 @@ type GraphConfig struct {
 	Observer string `json:"observer"`
 
 	// MaxIterations limits graph execution to prevent infinite loops
-	MaxIterations int `json:"max_iterations"`
+	MaxIterations int              `json:"max_iterations"`
+	Checkpoint    CheckpointConfig `json:"checkpoint"`
 }
 
 // DefaultGraphConfig returns sensible defaults for graph execution.
@@ -40,5 +55,6 @@ func DefaultGraphConfig(name string) GraphConfig {
 		Name:          name,
 		Observer:      "slog",
 		MaxIterations: 1000,
+		Checkpoint:    DefaultCheckpointConfig(),
 	}
 }

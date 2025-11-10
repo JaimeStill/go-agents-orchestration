@@ -50,13 +50,16 @@ type StateGraph interface {
 
 // stateGraph implements StateGraph interface with concrete execution engine.
 type stateGraph struct {
-	name          string
-	nodes         map[string]StateNode
-	edges         map[string][]Edge
-	entryPoint    string
-	exitPoints    map[string]bool
-	maxIterations int
-	observer      observability.Observer
+	name                 string
+	nodes                map[string]StateNode
+	edges                map[string][]Edge
+	entryPoint           string
+	exitPoints           map[string]bool
+	maxIterations        int
+	observer             observability.Observer
+	checkpointStore      CheckpointStore
+	checkpointInterval   int
+	preserverCheckpoints bool
 }
 
 // Name returns the graph identifier for event metadata.
@@ -86,13 +89,24 @@ func NewGraph(cfg config.GraphConfig) (StateGraph, error) {
 		return nil, fmt.Errorf("failed to resolve observer: %w", err)
 	}
 
+	var checkpointStore CheckpointStore
+	if cfg.Checkpoint.Interval > 0 {
+		checkpointStore, err = GetCheckpointStore(cfg.Checkpoint.Store)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve checkpoint store: %w", err)
+		}
+	}
+
 	return &stateGraph{
-		name:          cfg.Name,
-		nodes:         make(map[string]StateNode),
-		edges:         make(map[string][]Edge),
-		exitPoints:    make(map[string]bool),
-		maxIterations: cfg.MaxIterations,
-		observer:      observer,
+		name:                 cfg.Name,
+		nodes:                make(map[string]StateNode),
+		edges:                make(map[string][]Edge),
+		exitPoints:           make(map[string]bool),
+		maxIterations:        cfg.MaxIterations,
+		observer:             observer,
+		checkpointStore:      checkpointStore,
+		checkpointInterval:   cfg.Checkpoint.Interval,
+		preserverCheckpoints: cfg.Checkpoint.Preserve,
 	}, nil
 }
 
@@ -246,6 +260,7 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 		Source:    g.name,
 		Data: map[string]any{
 			"entry_point": g.entryPoint,
+			"run_id":      initialState.RunID(),
 			"exit_points": len(g.exitPoints),
 		},
 	})
@@ -267,9 +282,6 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 		}
 
 		iterations++
-		path = append(path, current)
-		visited[current]++
-
 		if iterations > g.maxIterations {
 			return state, &ExecutionError{
 				NodeName: current,
@@ -278,6 +290,9 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 				Err:      fmt.Errorf("max iterations (%d) exceeded", g.maxIterations),
 			}
 		}
+
+		visited[current]++
+		path = append(path, current)
 
 		if visited[current] > 1 {
 			g.observer.OnEvent(ctx, observability.Event{
@@ -335,7 +350,28 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 			}
 		}
 
-		state = newState
+		state = newState.SetCheckpointNode(current)
+
+		if g.checkpointInterval > 0 && iterations%g.checkpointInterval == 0 {
+			if err := state.Checkpoint(g.checkpointStore); err != nil {
+				return state, &ExecutionError{
+					NodeName: current,
+					State:    state,
+					Path:     path,
+					Err:      fmt.Errorf("checkpoint save failed: %w", err),
+				}
+			}
+
+			g.observer.OnEvent(ctx, observability.Event{
+				Type:      observability.EventCheckpointSave,
+				Timestamp: time.Now(),
+				Source:    g.name,
+				Data: map[string]any{
+					"node":   current,
+					"run_id": state.RunID(),
+				},
+			})
+		}
 
 		if g.exitPoints[current] {
 			g.observer.OnEvent(ctx, observability.Event{
@@ -348,6 +384,11 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 					"path_length": len(path),
 				},
 			})
+
+			if !g.preserverCheckpoints && g.checkpointInterval > 0 {
+				g.checkpointStore.Delete(state.RunID())
+			}
+
 			return state, nil
 		}
 
