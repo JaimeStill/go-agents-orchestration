@@ -35,10 +35,11 @@ Provide Go-native agent coordination primitives that extend [go-agents](https://
 - Stateful workflows with cycles and retries
 
 **Observability Infrastructure:**
-- Execution trace capture across workflow steps
-- Decision point logging with reasoning
-- Performance metrics (token usage, timing, retries)
-- Production debugging and optimization support
+- Observer pattern with event emission (complete - v0.1.0)
+- Structured logging via SlogObserver (complete - v0.1.0)
+- Zero-overhead NoOpObserver (complete - v0.1.0)
+- Extensible observer registry (complete - v0.1.0)
+- Advanced features (trace correlation, metrics aggregation, decision logging) planned for v1.0.0
 
 ### What This Package Does NOT Provide
 
@@ -360,37 +361,45 @@ Following go-agents patterns:
 - ✅ Observer integration (EventRouteEvaluate, EventRouteSelect, EventRouteExecute)
 - ✅ Tests achieve 80%+ coverage (95.3% achieved)
 
-### Phase 8: Observability Implementation
+### Phase 8: Advanced Observability (Optional - Post v0.1.0)
 
-**Goal**: Implement full observability infrastructure on integrated observer foundation.
+**Status**: Deferred to post-release based on real-world usage feedback
 
-**Estimated Time**: 6-8 hours
+**Goal**: Implement advanced observability features on proven observer foundation.
 
-**Packages:**
-- `observability/`: Structured logging, metrics aggregation, trace correlation
+**Rationale for Deferral:**
+- Core observability infrastructure complete (Observer interface, registry, NoOpObserver, SlogObserver)
+- Advanced features are application-specific and better designed after production usage
+- Extensibility via registry pattern allows custom implementations without core changes
+- Focus on v0.1.0 release with complete orchestration primitives
 
-**Features:**
-- Implement Observer interface with production features
-- Structured logging adapter (slog integration)
-- Metrics aggregation and reporting
+**Current Observability State (Complete):**
+- ✅ Observer interface with event emission
+- ✅ Observer registry for extensibility
+- ✅ NoOpObserver (zero overhead)
+- ✅ SlogObserver (structured logging)
+- ✅ Complete event definitions for all workflow phases
+- ✅ Integration across all packages (hub, state, workflows)
+- ✅ 100% test coverage
+
+**Planned Advanced Features (v1.0.0):**
 - Execution trace correlation across workflows
 - Decision point logging with reasoning capture
-- Performance metrics (latency, token usage, retries)
+- Performance metrics aggregation (latency, token usage, retries)
 - Confidence scoring utilities
+- OpenTelemetry integration
 
-**Integration:**
-- Leverages observer hooks from Phases 2-7
-- Minimal performance overhead
-- Optional (can be disabled via NoOpObserver)
-- Works across all orchestration primitives
+**Implementation Approach:**
+- Gather real-world usage feedback during v0.x.x validation
+- Design features based on actual production needs
+- Consider separate supplemental packages (e.g., go-agents-orchestration-otel)
+- Maintain backward compatibility with existing observer interface
 
-**Success Criteria:**
-- Comprehensive tracing without performance degradation
-- Metrics provide production debugging insights
-- Decision logging captures reasoning
-- Confidence scoring is accurate and useful
-- Observability can be toggled on/off
-- Tests achieve 80%+ coverage
+**Success Criteria (Pre-v1.0.0):**
+- Production usage validates observer pattern design
+- Specific observability needs identified and documented
+- Advanced features designed with proven use cases
+- Extensibility demonstrated through custom observer implementations
 
 ## Success Criteria
 
@@ -407,26 +416,74 @@ The go-agents-orchestration package is successful when:
 
 ## Package Lifecycle
 
-### Pre-Release Phase (v0.x.x)
+### Pre-Release Phase (v0.1.0) - **READY**
 
-- Breaking changes allowed during validation
+**Status**: Phases 1-7 complete, ready for release
+
+**Completed:**
+- ✅ Hub coordination and messaging (Phase 1)
+- ✅ State management core (Phase 2)
+- ✅ State graph execution (Phase 3)
+- ✅ Sequential chains (Phase 4)
+- ✅ Parallel execution (Phase 5)
+- ✅ Checkpointing (Phase 6)
+- ✅ Conditional routing + integration (Phase 7)
+- ✅ Core observability (NoOpObserver, SlogObserver)
+- ✅ 80%+ test coverage across all packages
+- ✅ Comprehensive documentation and examples
+
+**Purpose:**
 - Validate go-agents integration patterns
-- Gather feedback on API design
-- Iterate on core abstractions
+- Gather real-world usage feedback
+- Identify API friction points
+- Validate orchestration primitives in production scenarios
+
+**Breaking Changes:**
+- Allowed during validation period
+- Iterate on core abstractions based on feedback
+- Refine based on production usage patterns
+
+### Validation Phase (v0.2.0 - v0.x.x)
+
+**Focus**: Real-world usage and API refinement
+
+**Activities:**
+- Deploy in production scenarios
+- Gather performance metrics
+- Collect API usability feedback
+- Identify missing capabilities
+- Refine error handling and edge cases
+- Document best practices from real usage
+
+**Exit Criteria:**
+- API feels natural and complete
+- No major friction points identified
+- Performance meets production requirements
+- Documentation reflects real-world usage patterns
 
 ### Release Candidate (v1.0.0-rc.x)
 
-- API stabilized
-- All eight phases complete
-- Documentation complete
-- Test coverage meets requirements
+**Prerequisites:**
+- API stabilized based on validation feedback
+- Phases 1-7 battle-tested in production
+- Advanced observability features designed (Phase 8)
+- Documentation complete with production examples
+- All test coverage requirements met
+
+**Focus:**
+- API freeze for stability testing
+- Final documentation polish
+- Performance optimization
+- Security audit
 
 ### Stable Release (v1.0.0+)
 
-- API stability guarantees
-- Production-ready
-- Semantic versioning followed
+**Guarantees:**
+- API stability (semantic versioning)
+- Production-ready with proven track record
 - Backward compatibility maintained
+- Advanced observability features included (Phase 8)
+- Comprehensive examples from real deployments
 
 ## Design Philosophy
 
