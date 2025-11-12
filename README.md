@@ -49,7 +49,7 @@ This package is under active development and follows pre-release versioning (v0.
 - **Phase 3**: State graph execution engine - ✅ **Complete**
 - **Phase 4**: Sequential chains pattern - ✅ **Complete**
 - **Phase 5**: Parallel execution pattern + SlogObserver - ✅ **Complete**
-- **Phase 6**: Checkpointing infrastructure - Planned
+- **Phase 6**: Checkpointing infrastructure - ✅ **Complete**
 - **Phase 7**: Conditional routing + integration - Planned
 - **Phase 8**: Observability implementation - Planned
 

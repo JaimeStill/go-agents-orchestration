@@ -365,7 +365,7 @@ func DefaultHubConfig() HubConfig {
 3. Runtime behavior depends on initialized state
 4. Configuration does not persist beyond initialization
 
-## Phase 2-3: State Management (Completed)
+## Phase 2-3, 6: State Management (Completed)
 
 ### state Package
 
@@ -391,6 +391,7 @@ type StateGraph interface {
     SetEntryPoint(node string) error
     SetExitPoint(node string) error
     Execute(ctx context.Context, initialState State) (State, error)
+    Resume(ctx context.Context, runID string) (State, error)  // Phase 6
 }
 
 // StateNode represents a computation step in the graph
@@ -400,8 +401,11 @@ type StateNode interface {
 
 // State represents data flowing through the graph
 type State struct {
-    data     map[string]any
-    observer observability.Observer
+    data           map[string]any
+    observer       observability.Observer
+    runID          string      // Phase 6: Execution identity
+    checkpointNode string      // Phase 6: Last checkpointed node
+    timestamp      time.Time   // Phase 6: Creation/checkpoint time
 }
 
 // TransitionPredicate determines which edge to follow
@@ -423,6 +427,11 @@ type ExecutionError struct {
 - `Get(key)` - Retrieve value with existence check
 - `Set(key, value)` - Create new state with updated value
 - `Merge(other)` - Combine states (immutable)
+- `RunID()` - Get execution identifier (Phase 6)
+- `CheckpointNode()` - Get last checkpointed node (Phase 6)
+- `Timestamp()` - Get creation/checkpoint time (Phase 6)
+- `SetCheckpointNode(node)` - Update checkpoint metadata (Phase 6)
+- `Checkpoint(store)` - Save state to store (Phase 6)
 
 **Graph Execution:**
 
@@ -451,6 +460,56 @@ Phase 3 implementation provides complete execution engine:
 - `EventNodeStart` / `EventNodeComplete`
 - `EventEdgeEvaluate` / `EventEdgeTransition`
 - `EventCycleDetected`
+- `EventCheckpointSave` / `EventCheckpointLoad` / `EventCheckpointResume` (Phase 6)
+
+**Checkpointing (Phase 6):**
+
+Phase 6 adds workflow persistence and recovery through checkpoint save/resume:
+
+**Architecture**: State-centric checkpointing where State serves as self-describing execution artifact with embedded provenance metadata (runID, checkpointNode, timestamp). No separate Checkpoint wrapper - checkpoint IS State captured at execution stage.
+
+**CheckpointStore Interface:**
+```go
+type CheckpointStore interface {
+    Save(state State) error
+    Load(runID string) (State, error)
+    Delete(runID string) error
+    List() ([]string, error)
+}
+```
+
+**Checkpoint Lifecycle:**
+1. Graph execution saves State at configured intervals
+2. On success, checkpoints auto-deleted (unless Preserve=true)
+3. On failure, checkpoints persist for Resume
+4. Resume loads checkpoint and continues from next node
+
+**Configuration:**
+- `Interval`: Checkpoint every N nodes (0 = disabled)
+- `Store`: CheckpointStore implementation name (registry resolution)
+- `Preserve`: Keep checkpoints after success (default false)
+
+**Resume Semantics:**
+- Checkpoints saved AFTER node execution (represents completed work)
+- Resume skips to next node after checkpoint
+- Resume validates checkpoint exists and finds valid transition
+- Errors if checkpoint at exit point (execution already complete)
+
+**Implementations:**
+- `MemoryCheckpointStore`: Thread-safe in-memory storage (development/testing)
+- Custom stores via registry pattern (e.g., disk, database)
+
+**Observer Integration:**
+- `EventCheckpointSave`: Emitted when checkpoint saved during execution
+- `EventCheckpointLoad`: Emitted when checkpoint loaded for resume
+- `EventCheckpointResume`: Emitted when execution resumes from checkpoint
+
+**Error Handling:**
+- Checkpoint save failures halt execution (fail-fast for production reliability)
+- Load failures return clear errors with checkpoint context
+- Resume validates checkpoint state before continuing
+
+**Test Coverage**: 82.4% (20 comprehensive tests)
 
 **Integration with Hub:**
 
@@ -477,15 +536,17 @@ func (n *HubNode) Execute(ctx context.Context, state State) (State, error) {
 
 **Implementation Status:**
 
-Phase 2-3 implementation is complete:
-- State type with immutable operations
-- StateNode interface and FunctionNode
-- Edge with transition predicates (AlwaysTransition, KeyExists, KeyEquals, Not, And, Or)
-- StateGraph interface and concrete implementation
-- Graph execution engine with cycle detection
-- ExecutionError with rich context
-- Observer integration throughout
-- Test coverage: 95.6% (exceeds 80% requirement)
+Phase 2-3, 6 implementation is complete:
+- State type with immutable operations and checkpoint metadata (Phase 2, 6)
+- StateNode interface and FunctionNode (Phase 2)
+- Edge with transition predicates (AlwaysTransition, KeyExists, KeyEquals, Not, And, Or) (Phase 3)
+- StateGraph interface with Execute and Resume (Phase 3, 6)
+- Graph execution engine with cycle detection (Phase 3)
+- CheckpointStore interface and MemoryCheckpointStore implementation (Phase 6)
+- Checkpoint save/resume with configurable intervals (Phase 6)
+- ExecutionError with rich context (Phase 3)
+- Observer integration throughout (Phase 2-6)
+- Test coverage: 82.4% state package (exceeds 80% requirement)
 
 ### observability Package
 
@@ -556,6 +617,14 @@ type GraphConfig struct {
     Name          string
     Observer      string
     MaxIterations int
+    Checkpoint    CheckpointConfig  // Phase 6
+}
+
+// CheckpointConfig controls workflow state persistence
+type CheckpointConfig struct {
+    Store    string  // CheckpointStore name (registry resolution)
+    Interval int     // Checkpoint every N nodes (0 = disabled)
+    Preserve bool    // Keep checkpoints after success
 }
 
 // ChainConfig defines configuration for sequential chain execution
@@ -577,7 +646,7 @@ type ParallelConfig struct {
 
 Configuration package complete for current phases:
 - HubConfig (Phase 1)
-- GraphConfig (Phase 2)
+- GraphConfig with CheckpointConfig (Phase 2, 6)
 - ChainConfig (Phase 4)
 - ParallelConfig (Phase 5)
 - Default configuration functions for all types

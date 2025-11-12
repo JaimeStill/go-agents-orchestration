@@ -17,6 +17,10 @@ import (
 //
 // Observer integration is built-in from Phase 2, enabling production-grade
 // observability without retrofit friction in later phases.
+//
+// Checkpoint metadata (runID, checkpointNode, timestamp) provides execution
+// provenance for workflow persistence and recovery. This metadata flows through
+// all State transformations maintaining execution identity.
 type State struct {
 	data           map[string]any
 	observer       observability.Observer
@@ -25,14 +29,27 @@ type State struct {
 	timestamp      time.Time
 }
 
+// RunID returns the unique identifier for this execution run.
+//
+// The RunID is generated once when State is created and preserved through all
+// transformations (Clone, Set, Merge). It serves as the checkpoint identifier
+// for workflow persistence and recovery.
 func (s State) RunID() string {
 	return s.runID
 }
 
+// CheckpointNode returns the name of the last node where execution was checkpointed.
+//
+// This field tracks which node completed execution before the checkpoint was saved.
+// When resuming, execution continues from the next node after CheckpointNode.
 func (s State) CheckpointNode() string {
 	return s.checkpointNode
 }
 
+// Timestamp returns the time when this State was created or last checkpointed.
+//
+// The timestamp is set during State creation and updated when SetCheckpointNode
+// is called. It provides temporal context for execution provenance.
 func (s State) Timestamp() time.Time {
 	return s.timestamp
 }
@@ -145,6 +162,20 @@ func (s State) Set(key string, value any) State {
 	return newState
 }
 
+// SetCheckpointNode creates a new State with updated checkpoint metadata.
+//
+// This method updates the checkpointNode field and refreshes the timestamp
+// to mark when the checkpoint was taken. The original State is not modified
+// (immutability preserved).
+//
+// Called by the graph execution engine after successful node execution to
+// track execution progress for workflow persistence and recovery.
+//
+// Example:
+//
+//	s1 := state.New(observer).Set("data", "value")
+//	s2 := s1.SetCheckpointNode("process")
+//	// s2 has checkpoint metadata, s1 is unchanged
 func (s State) SetCheckpointNode(node string) State {
 	newState := s.Clone()
 	newState.checkpointNode = node
@@ -181,6 +212,22 @@ func (s State) Merge(other State) State {
 	return newState
 }
 
+// Checkpoint saves this State to the given CheckpointStore.
+//
+// This is a convenience method that delegates to store.Save(s). It enables
+// State to be self-checkpointing without directly depending on storage
+// implementation details.
+//
+// Returns error if the checkpoint save fails. The graph execution engine
+// treats checkpoint save errors as fatal when checkpointing is enabled.
+//
+// Example:
+//
+//	store := state.NewMemoryCheckpointStore()
+//	s := state.New(observer).Set("progress", "50%")
+//	if err := s.Checkpoint(store); err != nil {
+//	    log.Fatal(err)
+//	}
 func (s State) Checkpoint(store CheckpointStore) error {
 	return store.Save(s)
 }

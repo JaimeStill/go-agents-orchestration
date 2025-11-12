@@ -156,6 +156,40 @@ go run examples/phase-05-parallel-execution/main.go
 
 ---
 
+### Phase 6: Checkpointing
+**Directory:** [`phase-06-checkpointing/`](./phase-06-checkpointing/)
+
+Workflow persistence and recovery through checkpoint save/resume.
+
+**Scenario:** Multi-stage data analysis pipeline with simulated failure and recovery
+
+**Run:**
+```bash
+go run examples/phase-06-checkpointing/main.go
+```
+
+**Demonstrates:**
+- Checkpoint save at configurable intervals
+- State persistence across execution failures
+- Resume execution from saved checkpoints
+- Progress preservation (skipping completed work)
+- Observer integration (checkpoint events)
+- Production fault tolerance patterns
+
+**Expected Output:**
+- 4-stage pipeline: ingest → preprocess → analyze → report
+- First execution fails at stage 3 (simulated failure)
+- Checkpoint saved at stage 2 completion
+- Resume skips stages 1-2, continues from stage 3
+- Pipeline completes successfully on resume
+- JSON observer events showing save/load/resume
+- Execution time: ~9.5 seconds (5.9s initial + 3.6s resume)
+- Time saved: ~2-3s (skipped completed stages)
+
+**[Full Documentation →](./phase-06-checkpointing/README.md)**
+
+---
+
 ## Execution Patterns
 
 ### Basic Execution
@@ -173,7 +207,7 @@ To build executables:
 
 ```bash
 # Build all examples
-for example in phase-01-hubs phase-02-03-state-graphs phase-04-sequential-chains phase-05-parallel-execution; do
+for example in phase-01-hubs phase-02-03-state-graphs phase-04-sequential-chains phase-05-parallel-execution phase-06-checkpointing; do
     go build -o bin/$example examples/$example/main.go
 done
 
@@ -246,6 +280,7 @@ JSON events are logged to stdout alongside human-readable output:
 - **Phase 2+3:** `graph.start`, `node.start`, `node.complete`, `edge.evaluate`, `cycle.detected`, `graph.complete`
 - **Phase 4:** `chain.start`, `step.start`, `step.complete`, `chain.complete`
 - **Phase 5:** `parallel.start`, `worker.start`, `worker.complete`, `parallel.complete`
+- **Phase 6:** `checkpoint.save`, `checkpoint.load`, `checkpoint.resume` (plus all Phase 2+3 graph events)
 
 All phases emit: `state.create`, `state.clone`, `state.set` for state operations
 
@@ -259,6 +294,7 @@ All phases emit: `state.create`, `state.clone`, `state.set` for state operations
 | Phase 2+3 State Graphs | 7-10s | 6-10 node executions depending on test outcomes |
 | Phase 4 Sequential Chains | 5-6s | 5 sequential agent calls |
 | Phase 5 Parallel Execution | 2.5s | 12 concurrent agent calls with 4 workers |
+| Phase 6 Checkpointing | 9.5s | 4 stages total: 5.9s initial (fails) + 3.6s resume |
 
 **Note:** First execution may be slower due to model loading. Subsequent runs are faster with cached models.
 
@@ -379,12 +415,16 @@ Phase 1 (Foundation)
     ↓
 Phase 2+3 (State Graphs) ──┐
     ↓                      │
-Phase 4 (Sequential) ──────┼─→ Can be combined
+Phase 4 (Sequential) ──────┤
+    ↓                      ├─→ Can be combined
+Phase 5 (Parallel) ────────┤
     ↓                      │
-Phase 5 (Parallel) ────────┘
+Phase 6 (Checkpointing) ───┘
 ```
 
 **Independence:** Each phase can be explored independently, but understanding earlier phases helps with later concepts.
+
+**Phase 6 Note:** Builds directly on Phase 2+3 state graphs. Understanding state graph execution is recommended before exploring checkpointing.
 
 ## Getting Help
 

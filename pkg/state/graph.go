@@ -46,20 +46,22 @@ type StateGraph interface {
 
 	// Execute runs the graph from entry point with initial state
 	Execute(ctx context.Context, initialState State) (State, error)
+
+	Resume(ctx context.Context, runID string) (State, error)
 }
 
 // stateGraph implements StateGraph interface with concrete execution engine.
 type stateGraph struct {
-	name                 string
-	nodes                map[string]StateNode
-	edges                map[string][]Edge
-	entryPoint           string
-	exitPoints           map[string]bool
-	maxIterations        int
-	observer             observability.Observer
-	checkpointStore      CheckpointStore
-	checkpointInterval   int
-	preserverCheckpoints bool
+	name                string
+	nodes               map[string]StateNode
+	edges               map[string][]Edge
+	entryPoint          string
+	exitPoints          map[string]bool
+	maxIterations       int
+	observer            observability.Observer
+	checkpointStore     CheckpointStore
+	checkpointInterval  int
+	preserveCheckpoints bool
 }
 
 // Name returns the graph identifier for event metadata.
@@ -98,15 +100,15 @@ func NewGraph(cfg config.GraphConfig) (StateGraph, error) {
 	}
 
 	return &stateGraph{
-		name:                 cfg.Name,
-		nodes:                make(map[string]StateNode),
-		edges:                make(map[string][]Edge),
-		exitPoints:           make(map[string]bool),
-		maxIterations:        cfg.MaxIterations,
-		observer:             observer,
-		checkpointStore:      checkpointStore,
-		checkpointInterval:   cfg.Checkpoint.Interval,
-		preserverCheckpoints: cfg.Checkpoint.Preserve,
+		name:                cfg.Name,
+		nodes:               make(map[string]StateNode),
+		edges:               make(map[string][]Edge),
+		exitPoints:          make(map[string]bool),
+		maxIterations:       cfg.MaxIterations,
+		observer:            observer,
+		checkpointStore:     checkpointStore,
+		checkpointInterval:  cfg.Checkpoint.Interval,
+		preserveCheckpoints: cfg.Checkpoint.Preserve,
 	}, nil
 }
 
@@ -250,6 +252,76 @@ func (g *stateGraph) Validate() error {
 //
 // Returns ExecutionError with full context on failure.
 func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, error) {
+	return g.execute(ctx, g.entryPoint, initialState)
+}
+
+// Resume continues graph execution from a saved checkpoint.
+//
+// Loads the checkpoint identified by runID and resumes execution from the next
+// node after the checkpoint. The checkpoint State preserves all execution context
+// including data transformations and metadata.
+//
+// Resume algorithm:
+//  1. Verify checkpointing is enabled for this graph
+//  2. Load checkpoint State from store
+//  3. Emit EventCheckpointLoad
+//  4. Find next valid node transition from checkpoint
+//  5. Emit EventCheckpointResume
+//  6. Continue execution from next node
+//
+// Returns error if:
+//   - Checkpointing not enabled (Interval=0)
+//   - Checkpoint not found
+//   - No valid transition from checkpoint node
+//   - Checkpoint is at exit point (execution already complete)
+//
+// Example:
+//
+//	runID := "failed-workflow-abc123"
+//	finalState, err := graph.Resume(ctx, runID)
+//	if err != nil {
+//	    log.Fatalf("Resume failed: %v", err)
+//	}
+func (g *stateGraph) Resume(ctx context.Context, runID string) (State, error) {
+	if g.checkpointStore == nil {
+		return State{}, fmt.Errorf("checkpointing not enabled for this graph")
+	}
+
+	state, err := g.checkpointStore.Load(runID)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to load checkpoint: %w", err)
+	}
+
+	g.observer.OnEvent(ctx, observability.Event{
+		Type:      observability.EventCheckpointLoad,
+		Timestamp: time.Now(),
+		Source:    g.name,
+		Data: map[string]any{
+			"node":   state.CheckpointNode(),
+			"run_id": runID,
+		},
+	})
+
+	nextNode, err := g.findNextNode(state.CheckpointNode(), state)
+	if err != nil {
+		return State{}, fmt.Errorf("failed to find next node after checkpoint: %w", err)
+	}
+
+	g.observer.OnEvent(ctx, observability.Event{
+		Type:      observability.EventCheckpointResume,
+		Timestamp: time.Now(),
+		Source:    g.name,
+		Data: map[string]any{
+			"checkpoint_node": state.CheckpointNode(),
+			"resume_node":     nextNode,
+			"run_id":          runID,
+		},
+	})
+
+	return g.execute(ctx, nextNode, state)
+}
+
+func (g *stateGraph) execute(ctx context.Context, startNode string, initialState State) (State, error) {
 	if err := g.Validate(); err != nil {
 		return initialState, fmt.Errorf("graph validation failed: %w", err)
 	}
@@ -265,7 +337,7 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 		},
 	})
 
-	current := g.entryPoint
+	current := startNode
 	state := initialState
 	iterations := 0
 	visited := make(map[string]int)
@@ -385,7 +457,7 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 				},
 			})
 
-			if !g.preserverCheckpoints && g.checkpointInterval > 0 {
+			if !g.preserveCheckpoints && g.checkpointInterval > 0 {
 				g.checkpointStore.Delete(state.RunID())
 			}
 
@@ -445,4 +517,36 @@ func (g *stateGraph) Execute(ctx context.Context, initialState State) (State, er
 
 		current = nextNode
 	}
+}
+
+// findNextNode determines the next node to execute from a checkpoint.
+//
+// Evaluates outgoing edges from fromNode to find the first valid transition.
+// Predicates are evaluated against the checkpoint State to determine which
+// edge to follow.
+//
+// Returns error if:
+//   - fromNode is an exit point (execution already complete)
+//   - fromNode has no outgoing edges
+//   - No edge predicate evaluates to true
+//
+// Called by Resume to determine where execution should continue after loading
+// a checkpoint.
+func (g *stateGraph) findNextNode(fromNode string, state State) (string, error) {
+	edges, hasEdges := g.edges[fromNode]
+	if !hasEdges {
+		if g.exitPoints[fromNode] {
+			return "", fmt.Errorf("checkpoint was at exit point, execution already complete")
+		}
+		return "", fmt.Errorf("no outgoing edges from checkpoint node: %s", fromNode)
+	}
+
+	for i := range edges {
+		edge := &edges[i]
+		if edge.Predicate == nil || edge.Predicate(state) {
+			return edge.To, nil
+		}
+	}
+
+	return "", fmt.Errorf("no valid edge transition from checkpoint node: %s", fromNode)
 }
