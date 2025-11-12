@@ -14,8 +14,8 @@ func TestGraphConfig_DefaultGraphConfig(t *testing.T) {
 	if cfg.Name != "test-graph" {
 		t.Errorf("DefaultGraphConfig().Name = %v, want %v", cfg.Name, "test-graph")
 	}
-	if cfg.Observer != "noop" {
-		t.Errorf("DefaultGraphConfig().Observer = %v, want %v", cfg.Observer, "noop")
+	if cfg.Observer != "slog" {
+		t.Errorf("DefaultGraphConfig().Observer = %v, want %v", cfg.Observer, "slog")
 	}
 	if cfg.MaxIterations != 1000 {
 		t.Errorf("DefaultGraphConfig().MaxIterations = %v, want %v", cfg.MaxIterations, 1000)

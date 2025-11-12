@@ -190,6 +190,44 @@ go run examples/phase-06-checkpointing/main.go
 
 ---
 
+### Phase 7: Conditional Routing
+**Directory:** [`phase-07-conditional-routing/`](./phase-07-conditional-routing/)
+
+Conditional routing with state management, pattern composition, and revision loops.
+
+**Scenario:** Technical document review workflow with sequential analysis, concurrent review, and conditional approval routing
+
+**Run:**
+```bash
+go run examples/phase-07-conditional-routing/main.go
+```
+
+**Demonstrates:**
+- ChainNode integration (sequential analysis by 3 specialists)
+- ParallelNode integration (concurrent review by 3 reviewers)
+- ConditionalNode routing (approve/revise/reject based on consensus)
+- State accumulation across multiple iterations
+- Revision loops with termination logic (max 2 revisions)
+- Pattern composition within state graphs
+- Workflow cycles with cycle detection
+- All three integration helpers in one workflow
+
+**Expected Output:**
+- 6 agents (3 analysts + 3 reviewers) processing document
+- Sequential analysis by technical, security, and business specialists
+- Concurrent reviews with consensus calculation (66% threshold)
+- Conditional routing based on review consensus
+- Revision loop (typically 2 revisions before rejection)
+- 9-10 graph iterations with cycle detection events
+- Final decision: approved, rejected, or max revisions reached
+- JSON observer events from all layers (graph, patterns, agents)
+- Execution time: ~40-50 seconds (3 analysis cycles + 3 review cycles)
+- Document version incrementing with each revision
+
+**[Full Documentation →](./phase-07-conditional-routing/README.md)**
+
+---
+
 ## Execution Patterns
 
 ### Basic Execution
@@ -207,7 +245,7 @@ To build executables:
 
 ```bash
 # Build all examples
-for example in phase-01-hubs phase-02-03-state-graphs phase-04-sequential-chains phase-05-parallel-execution phase-06-checkpointing; do
+for example in phase-01-hubs phase-02-03-state-graphs phase-04-sequential-chains phase-05-parallel-execution phase-06-checkpointing phase-07-conditional-routing; do
     go build -o bin/$example examples/$example/main.go
 done
 
@@ -281,6 +319,7 @@ JSON events are logged to stdout alongside human-readable output:
 - **Phase 4:** `chain.start`, `step.start`, `step.complete`, `chain.complete`
 - **Phase 5:** `parallel.start`, `worker.start`, `worker.complete`, `parallel.complete`
 - **Phase 6:** `checkpoint.save`, `checkpoint.load`, `checkpoint.resume` (plus all Phase 2+3 graph events)
+- **Phase 7:** `route.evaluate`, `route.select`, `route.execute` (plus all Phase 2+3 graph and Phase 4-5 pattern events)
 
 All phases emit: `state.create`, `state.clone`, `state.set` for state operations
 
@@ -295,6 +334,7 @@ All phases emit: `state.create`, `state.clone`, `state.set` for state operations
 | Phase 4 Sequential Chains | 5-6s | 5 sequential agent calls |
 | Phase 5 Parallel Execution | 2.5s | 12 concurrent agent calls with 4 workers |
 | Phase 6 Checkpointing | 9.5s | 4 stages total: 5.9s initial (fails) + 3.6s resume |
+| Phase 7 Conditional Routing | 40-50s | 9 sequential + 9 concurrent calls across 3 workflow cycles |
 
 **Note:** First execution may be slower due to model loading. Subsequent runs are faster with cached models.
 
@@ -419,12 +459,16 @@ Phase 4 (Sequential) ──────┤
     ↓                      ├─→ Can be combined
 Phase 5 (Parallel) ────────┤
     ↓                      │
-Phase 6 (Checkpointing) ───┘
+Phase 6 (Checkpointing) ───┤
+    ↓                      │
+Phase 7 (Conditional) ─────┘
 ```
 
 **Independence:** Each phase can be explored independently, but understanding earlier phases helps with later concepts.
 
 **Phase 6 Note:** Builds directly on Phase 2+3 state graphs. Understanding state graph execution is recommended before exploring checkpointing.
+
+**Phase 7 Note:** Combines all pattern types (Phases 4-5) within state graphs (Phases 2-3). Understanding both workflow patterns and state graphs is recommended before exploring conditional routing.
 
 ## Getting Help
 

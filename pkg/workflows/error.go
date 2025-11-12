@@ -209,3 +209,20 @@ func (e *ParallelError[TItem]) Unwrap() []error {
 	}
 	return errs
 }
+
+type ConditionalError[TState any] struct {
+	Route string
+	State TState
+	Err   error
+}
+
+func (e ConditionalError[TState]) Error() string {
+	if e.Route == "" {
+		return fmt.Sprintf("conditional routing failed: %v", e.Err)
+	}
+	return fmt.Sprintf("conditional routing failed for route '%s': %v", e.Route, e.Err)
+}
+
+func (e ConditionalError[TState]) Unwrap() error {
+	return e.Err
+}

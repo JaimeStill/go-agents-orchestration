@@ -458,7 +458,7 @@ func TestProcessChain_LargeChain(t *testing.T) {
 
 	itemCount := 1000
 	items := make([]int, itemCount)
-	for i := 0; i < itemCount; i++ {
+	for i := range itemCount {
 		items[i] = i
 	}
 

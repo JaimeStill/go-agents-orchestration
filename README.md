@@ -50,7 +50,7 @@ This package is under active development and follows pre-release versioning (v0.
 - **Phase 4**: Sequential chains pattern - ✅ **Complete**
 - **Phase 5**: Parallel execution pattern + SlogObserver - ✅ **Complete**
 - **Phase 6**: Checkpointing infrastructure - ✅ **Complete**
-- **Phase 7**: Conditional routing + integration - Planned
+- **Phase 7**: Conditional routing + integration - ✅ **Complete**
 - **Phase 8**: Observability implementation - Planned
 
 ## Documentation
@@ -69,6 +69,15 @@ ISS Maintenance EVA scenario demonstrating all Phase 1 orchestration capabilitie
 - Broadcast communication (one-to-many within a hub)
 - Pub/sub messaging (topic-based distribution with sender filtering)
 - Cross-hub coordination (agents registered in multiple hubs)
+
+### [Phase 7: Conditional Routing](./examples/phase-07-conditional-routing)
+
+Document review workflow demonstrating stateful multi-agent workflows with all Phase 7 features:
+- Sequential chain execution (3 analysts processing document sections)
+- Parallel execution (3 reviewers analyzing concurrently)
+- Conditional routing (approval/revision decisions)
+- State graph integration (ChainNode, ParallelNode, ConditionalNode)
+- Revision loops with termination logic (max 2 revisions)
 
 
 ## Installation
@@ -231,5 +240,82 @@ if len(result.Errors) > 0 {
         log.Printf("Item %d failed: %v", taskErr.Index, taskErr.Err)
     }
 }
+```
+
+### Conditional Routing (Phase 7)
+
+Route state through different handlers based on predicate evaluation:
+
+```go
+predicate := func(s state.State) (string, error) {
+    consensus, _ := s.Get("consensus")
+    if consensus.(bool) {
+        return "approve", nil
+    }
+    return "reject", nil
+}
+
+routes := workflows.Routes[state.State]{
+    Handlers: map[string]workflows.RouteHandler[state.State]{
+        "approve": func(ctx context.Context, s state.State) (state.State, error) {
+            return s.Set("status", "approved"), nil
+        },
+        "reject": func(ctx context.Context, s state.State) (state.State, error) {
+            return s.Set("status", "rejected"), nil
+        },
+    },
+    Default: func(ctx context.Context, s state.State) (state.State, error) {
+        return s.Set("status", "pending"), nil
+    },
+}
+
+cfg := config.DefaultConditionalConfig()
+finalState, err := workflows.ProcessConditional(ctx, cfg, initialState, predicate, routes)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### State Graph Integration (Phase 7)
+
+Compose workflow patterns within state graphs using integration helpers:
+
+```go
+// Sequential analysis node
+analysisNode := workflows.ChainNode(
+    chainCfg,
+    sections,
+    analyzeSection,
+    nil,
+)
+
+// Parallel review node
+reviewNode := workflows.ParallelNode(
+    parallelCfg,
+    reviewers,
+    reviewDocument,
+    nil,
+    aggregateReviews,
+)
+
+// Conditional routing node
+routingNode := workflows.ConditionalNode(
+    conditionalCfg,
+    checkConsensus,
+    approvalRoutes,
+)
+
+// Build state graph
+graph, _ := state.NewGraph(graphCfg)
+graph.AddNode("analyze", analysisNode)
+graph.AddNode("review", reviewNode)
+graph.AddNode("route", routingNode)
+graph.AddEdge("analyze", "review", state.AlwaysTransition())
+graph.AddEdge("review", "route", state.AlwaysTransition())
+graph.SetEntryPoint("analyze")
+graph.SetExitPoint("route")
+
+// Execute workflow
+finalState, err := graph.Execute(ctx, initialState)
 ```
 

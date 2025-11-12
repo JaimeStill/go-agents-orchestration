@@ -102,3 +102,13 @@ func DefaultParallelConfig() ParallelConfig {
 		Observer:   "slog",
 	}
 }
+
+type ConditionalConfig struct {
+	Observer string `json:"observer"`
+}
+
+func DefaultConditionalConfig() ConditionalConfig {
+	return ConditionalConfig{
+		Observer: "slog",
+	}
+}

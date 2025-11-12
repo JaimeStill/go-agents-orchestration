@@ -19,7 +19,7 @@ Level 2: hub/               # Agent coordination (depends on messaging)
     ↓
 Level 3: state/             # State graph execution (depends on observability)
     ↓
-Level 4: patterns/          # Workflow patterns (depends on hub + state)
+Level 4: workflows/         # Workflow patterns (depends on state + observability)
 ```
 
 **Rationale**: Lower layers cannot import higher layers. This prevents circular dependencies and ensures each layer can be validated independently. Observability at Level 0 enables all layers to integrate observer pattern.
@@ -48,7 +48,8 @@ github.com/JaimeStill/go-agents-orchestration/
 │
 ├── config/                 # Configuration structures
 │   ├── hub.go              # HubConfig
-│   └── state.go            # GraphConfig
+│   ├── state.go            # GraphConfig, CheckpointConfig
+│   └── workflows.go        # ChainConfig, ParallelConfig, ConditionalConfig
 │
 ├── state/                  # Level 3: State graph execution
 │   ├── state.go            # State type with immutable operations
@@ -58,14 +59,16 @@ github.com/JaimeStill/go-agents-orchestration/
 │   ├── error.go            # ExecutionError type
 │   └── doc.go             # Package documentation
 │
-├── patterns/               # Level 4: Workflow patterns (Phase 4-5)
+├── workflows/              # Level 4: Workflow patterns (Phase 4-7)
 │   ├── chain.go            # Sequential chains
 │   ├── parallel.go         # Parallel execution
 │   ├── conditional.go      # Conditional routing
-│   └── stateful.go         # Stateful workflows
+│   ├── integration.go      # State graph integration helpers
+│   └── error.go            # Workflow error types
 │
 └── examples/               # Integration examples
-    └── phase-01-hubs/      # Hub coordination example
+    ├── phase-01-hubs/      # Hub coordination example
+    └── phase-07-conditional-routing/  # Stateful workflow example
 ```
 
 ## Phase 1: Foundation (Completed)
@@ -582,9 +585,10 @@ func RegisterObserver(name string, observer Observer)
 **Event Types Defined:**
 
 - Phase 2-3: State operations and graph execution
-- Phase 4-5: Workflow patterns
+- Phase 4: Sequential chain execution
+- Phase 5: Parallel execution
 - Phase 6: Checkpointing
-- Phase 7: Conditional routing
+- Phase 7: Conditional routing (EventRouteEvaluate, EventRouteSelect, EventRouteExecute)
 - Phase 8: Full observability implementation
 
 **Implementation Status:**
@@ -640,6 +644,11 @@ type ParallelConfig struct {
     FailFast   bool   // Stop on first error vs collect all
     Observer   string // Observer name for resolution
 }
+
+// ConditionalConfig defines configuration for conditional routing
+type ConditionalConfig struct {
+    Observer string // Observer name for resolution
+}
 ```
 
 **Implementation Status:**
@@ -649,10 +658,11 @@ Configuration package complete for current phases:
 - GraphConfig with CheckpointConfig (Phase 2, 6)
 - ChainConfig (Phase 4)
 - ParallelConfig (Phase 5)
+- ConditionalConfig (Phase 7)
 - Default configuration functions for all types
 - Test coverage: 100%
 
-## Phase 4-7: Workflow Patterns (Phase 4-5 Complete)
+## Phase 4-7: Workflow Patterns (Complete)
 
 ### workflows Package
 
@@ -686,17 +696,51 @@ Configuration package complete for current phases:
    - Progress callback support
    - Test coverage: 96.6%
 
-**Planned Patterns:**
+3. **Conditional Routing** (Phase 7 - Complete): Predicate-based handler selection for state-driven routing
+   - Generic over TState (state to evaluate and process)
+   - RoutePredicate evaluates state and returns route name
+   - RouteHandler processes state for specific route
+   - Routes maps route names to handlers with optional default fallback
+   - Observer integration with route evaluation, selection, and execution events
+   - Rich error context via ConditionalError[TState]
+   - Context cancellation at evaluation and execution boundaries
+   - No progress callback (single decision point, not iterative)
+   - Test coverage: 91.3%
 
-3. **Conditional Routing** (Phase 7): State-based routing decisions with predicate evaluation
-4. **Stateful Workflows** (Phase 7): Complex compositions combining patterns with state graphs
+**Integration Helpers (Phase 7 - Complete):**
+
+Integration helpers bridge workflow patterns and state graphs, enabling pattern composition within graph nodes:
+
+1. **ChainNode**: Wraps ProcessChain in StateNode for sequential processing within graphs
+   - Executes chain with state accumulation
+   - Returns final state to graph for further execution
+   - Enables linear workflows as graph nodes
+
+2. **ParallelNode**: Wraps ProcessParallel in StateNode for concurrent processing within graphs
+   - Processes items concurrently via worker pool
+   - Aggregates results into state via aggregator function
+   - Returns aggregated state to graph
+
+3. **ConditionalNode**: Wraps ProcessConditional in StateNode for routing logic within graphs
+   - Evaluates state via predicate to select route
+   - Executes corresponding handler
+   - Returns updated state to graph
+
+**Key Design:**
+- No hub parameter (processors capture hub in closures if needed)
+- State accumulation through graph execution
+- Observer events propagate from wrapped patterns
+- Error context preserved through StateNode wrapper
+- Test coverage: 80-100% for integration helpers
 
 **Implementation Status:**
 
 - Sequential Chain: Complete with comprehensive tests (97.4% coverage)
 - Parallel Execution: Complete with comprehensive tests (96.6% coverage)
-- Overall workflows test coverage: 96.6% (exceeds 80% requirement)
-- Documentation: Complete with examples for both patterns
+- Conditional Routing: Complete with comprehensive tests (91.3% coverage)
+- Integration Helpers: Complete with comprehensive tests (80-100% coverage)
+- Overall workflows test coverage: 95.3% (exceeds 80% requirement)
+- Documentation: Complete with examples for all patterns and integration
 
 ### Pattern Independence
 
