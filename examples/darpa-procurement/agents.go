@@ -5,7 +5,7 @@ import (
 
 	"github.com/JaimeStill/go-agents/pkg/agent"
 	"github.com/JaimeStill/go-agents/pkg/config"
-	"github.com/JaimeStill/go-agents/pkg/types"
+	"github.com/JaimeStill/go-agents/pkg/protocol"
 )
 
 type AgentRegistry struct {
@@ -92,7 +92,7 @@ func (wc *WorkflowConfig) createAgent(name, systemPrompt string) (agent.Agent, e
 	}
 
 	if wc.MaxTokens > 0 {
-		a.Model().Options[types.Chat]["max_tokens"] = wc.MaxTokens
+		a.Model().Options[protocol.Chat]["max_tokens"] = wc.MaxTokens
 	}
 
 	return a, nil

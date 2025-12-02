@@ -73,7 +73,9 @@ func main() {
 Analyze technical accuracy, implementation details, and code examples.
 Identify any technical errors, unclear explanations, or missing information.
 Keep your analysis concise (2-3 sentences) and list specific issues.`,
-		Client: llamaConfig.Client,
+		Client:   llamaConfig.Client,
+		Provider: llamaConfig.Provider,
+		Model:    llamaConfig.Model,
 	}
 
 	securityAnalystCfg := &agentconfig.AgentConfig{
@@ -82,7 +84,9 @@ Keep your analysis concise (2-3 sentences) and list specific issues.`,
 Analyze security implications, vulnerability disclosures, and security best practices.
 Identify any security concerns, missing warnings, or dangerous patterns.
 Keep your analysis concise (2-3 sentences) and list specific issues.`,
-		Client: gemmaConfig.Client,
+		Client:   gemmaConfig.Client,
+		Provider: gemmaConfig.Provider,
+		Model:    gemmaConfig.Model,
 	}
 
 	businessAnalystCfg := &agentconfig.AgentConfig{
@@ -91,7 +95,9 @@ Keep your analysis concise (2-3 sentences) and list specific issues.`,
 Analyze business value, user impact, and clarity for non-technical readers.
 Identify any unclear business justification or missing user perspective.
 Keep your analysis concise (2-3 sentences) and list specific issues.`,
-		Client: llamaConfig.Client,
+		Client:   llamaConfig.Client,
+		Provider: llamaConfig.Provider,
+		Model:    llamaConfig.Model,
 	}
 
 	reviewer1Cfg := &agentconfig.AgentConfig{
@@ -100,7 +106,9 @@ Keep your analysis concise (2-3 sentences) and list specific issues.`,
 Review the document and prior analyses. Provide approval or rejection with justification.
 Be thorough but fair. Respond in 2-3 sentences with clear approval/rejection.
 Start response with "APPROVE:" or "REJECT:" followed by reasoning.`,
-		Client: gemmaConfig.Client,
+		Client:   gemmaConfig.Client,
+		Provider: gemmaConfig.Provider,
+		Model:    gemmaConfig.Model,
 	}
 
 	reviewer2Cfg := &agentconfig.AgentConfig{
@@ -109,7 +117,9 @@ Start response with "APPROVE:" or "REJECT:" followed by reasoning.`,
 Review the document and prior analyses. Provide approval or rejection with justification.
 Focus on overall quality and completeness. Respond in 2-3 sentences with clear approval/rejection.
 Start response with "APPROVE:" or "REJECT:" followed by reasoning.`,
-		Client: llamaConfig.Client,
+		Client:   llamaConfig.Client,
+		Provider: llamaConfig.Provider,
+		Model:    llamaConfig.Model,
 	}
 
 	reviewer3Cfg := &agentconfig.AgentConfig{
@@ -118,7 +128,9 @@ Start response with "APPROVE:" or "REJECT:" followed by reasoning.`,
 Review the document and prior analyses. Provide approval or rejection with justification.
 Focus on technical depth and accuracy. Respond in 2-3 sentences with clear approval/rejection.
 Start response with "APPROVE:" or "REJECT:" followed by reasoning.`,
-		Client: gemmaConfig.Client,
+		Client:   gemmaConfig.Client,
+		Provider: gemmaConfig.Provider,
+		Model:    gemmaConfig.Model,
 	}
 
 	techAnalyst, err := agent.New(techAnalystCfg)

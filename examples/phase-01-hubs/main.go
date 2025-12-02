@@ -46,7 +46,9 @@ EVA status: 2 hours 15 minutes elapsed, 3 hours 45 minutes remaining
 Equipment: All tools accounted for, tether secured, suit systems nominal
 Position: Starboard truss section S-3, 15 meters from airlock
 Respond concisely in 1-2 sentences as if communicating over space-to-ground radio.`,
-		Client: llamaConfig.Client,
+		Client:   llamaConfig.Client,
+		Provider: llamaConfig.Provider,
+		Model:    llamaConfig.Model,
 	}
 
 	llamaConfig2 := &agentconfig.AgentConfig{
@@ -57,7 +59,9 @@ EVA status: 2 hours 15 minutes elapsed, 3 hours 45 minutes remaining
 Equipment: Spare components secured, safety tether verified, suit nominal
 Position: Starboard truss section S-2, maintaining visual contact with specialist-1
 Respond concisely in 1-2 sentences as if communicating over space-to-ground radio.`,
-		Client: llamaConfig.Client,
+		Client:   llamaConfig.Client,
+		Provider: llamaConfig.Provider,
+		Model:    llamaConfig.Model,
 	}
 
 	gemmaConfig.Name = "mission-commander"
@@ -77,7 +81,9 @@ Station status: All internal systems nominal, pressure stable
 Support: Tools staged for retrieval, backup equipment ready
 Monitoring: Tracking suit telemetry, communication relay, orbital position
 Respond concisely in 1-2 sentences as flight engineer.`,
-		Client: llamaConfig.Client,
+		Client:   llamaConfig.Client,
+		Provider: llamaConfig.Provider,
+		Model:    llamaConfig.Model,
 	}
 
 	// Create agents

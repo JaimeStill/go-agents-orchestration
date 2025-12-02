@@ -1,19 +1,17 @@
 {
   "name": "gemma-agent",
-  "client": {
-    "provider": {
-      "name": "ollama",
-      "base_url": "http://localhost:11434",
-      "model": {
-        "name": "gemma3:4b",
-        "capabilities": {
-          "chat": {
-            "max_tokens": 150
-          },
-          "vision": {
-            "max_tokens": 150
-          }
-        }
+  "provider": {
+    "name": "ollama",
+    "base_url": "http://localhost:11434"
+  },
+  "model": {
+    "name": "gemma3:4b",
+    "capabilities": {
+      "chat": {
+        "max_tokens": 150
+      },
+      "vision": {
+        "max_tokens": 150
       }
     }
   }

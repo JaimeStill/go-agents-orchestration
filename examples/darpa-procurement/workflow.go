@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/JaimeStill/go-agents/pkg/types"
+	"github.com/JaimeStill/go-agents/pkg/response"
 	"github.com/JaimeStill/go-agents-orchestration/pkg/config"
 	"github.com/JaimeStill/go-agents-orchestration/pkg/state"
 	"github.com/JaimeStill/go-agents-orchestration/pkg/workflows"
@@ -312,27 +312,27 @@ Provide your response in your directed JSON format.`,
 		}
 
 		processor := func(ctx context.Context, task AnalysisTask) (AnalysisResult, error) {
-			var response *types.ChatResponse
+			var resp *response.ChatResponse
 			var err error
 
 			switch task.Name {
 			case "budget":
-				response, err = registry.BudgetAnalyst.Chat(ctx, task.Prompt)
+				resp, err = registry.BudgetAnalyst.Chat(ctx, task.Prompt)
 				if err != nil {
 					return AnalysisResult{}, fmt.Errorf("budget analyst failed: %w", err)
 				}
-				validation, parseErr := parseJSON[BudgetValidation](response.Content())
+				validation, parseErr := parseJSON[BudgetValidation](resp.Content())
 				if parseErr != nil {
 					return AnalysisResult{}, fmt.Errorf("failed to parse budget validation: %w", parseErr)
 				}
 				return AnalysisResult{Name: "budget", Validation: &validation}, nil
 
 			case "optimizer":
-				response, err = registry.CostOptimizer.Chat(ctx, task.Prompt)
+				resp, err = registry.CostOptimizer.Chat(ctx, task.Prompt)
 				if err != nil {
 					return AnalysisResult{}, fmt.Errorf("cost optimizer failed: %w", err)
 				}
-				optimization, parseErr := parseJSON[CostOptimization](response.Content())
+				optimization, parseErr := parseJSON[CostOptimization](resp.Content())
 				if parseErr != nil {
 					return AnalysisResult{}, fmt.Errorf("failed to parse cost optimization: %w", parseErr)
 				}
@@ -562,7 +562,7 @@ Provide your response in your directed JSON format.`,
 }
 
 func routeToExecutive(ctx context.Context, s state.State, executive interface {
-	Chat(context.Context, string, ...map[string]any) (*types.ChatResponse, error)
+	Chat(context.Context, string, ...map[string]any) (*response.ChatResponse, error)
 }, title string, cost int, route string) (state.State, error) {
 	fmt.Printf("→ Routing to %s for final approval (route: %s)...\n", title, route)
 
