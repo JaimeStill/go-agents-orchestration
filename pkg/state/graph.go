@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/JaimeStill/go-agents-orchestration/pkg/config"
@@ -297,12 +298,12 @@ func (g *stateGraph) Resume(ctx context.Context, runID string) (State, error) {
 		Timestamp: time.Now(),
 		Source:    g.name,
 		Data: map[string]any{
-			"node":   state.CheckpointNode(),
+			"node":   state.CheckpointNode,
 			"run_id": runID,
 		},
 	})
 
-	nextNode, err := g.findNextNode(state.CheckpointNode(), state)
+	nextNode, err := g.findNextNode(state.CheckpointNode, state)
 	if err != nil {
 		return State{}, fmt.Errorf("failed to find next node after checkpoint: %w", err)
 	}
@@ -312,7 +313,7 @@ func (g *stateGraph) Resume(ctx context.Context, runID string) (State, error) {
 		Timestamp: time.Now(),
 		Source:    g.name,
 		Data: map[string]any{
-			"checkpoint_node": state.CheckpointNode(),
+			"checkpoint_node": state.CheckpointNode,
 			"resume_node":     nextNode,
 			"run_id":          runID,
 		},
@@ -332,7 +333,7 @@ func (g *stateGraph) execute(ctx context.Context, startNode string, initialState
 		Source:    g.name,
 		Data: map[string]any{
 			"entry_point": g.entryPoint,
-			"run_id":      initialState.RunID(),
+			"run_id":      initialState.RunID,
 			"exit_points": len(g.exitPoints),
 		},
 	})
@@ -395,8 +396,9 @@ func (g *stateGraph) execute(ctx context.Context, startNode string, initialState
 			Timestamp: time.Now(),
 			Source:    g.name,
 			Data: map[string]any{
-				"node":      current,
-				"iteration": iterations,
+				"node":           current,
+				"iteration":      iterations,
+				"input_snapshot": maps.Clone(state.Data),
 			},
 		})
 
@@ -407,9 +409,10 @@ func (g *stateGraph) execute(ctx context.Context, startNode string, initialState
 			Timestamp: time.Now(),
 			Source:    g.name,
 			Data: map[string]any{
-				"node":      current,
-				"iteration": iterations,
-				"error":     err != nil,
+				"node":            current,
+				"iteration":       iterations,
+				"error":           err != nil,
+				"output_snapshot": maps.Clone(newState.Data),
 			},
 		})
 
@@ -440,7 +443,7 @@ func (g *stateGraph) execute(ctx context.Context, startNode string, initialState
 				Source:    g.name,
 				Data: map[string]any{
 					"node":   current,
-					"run_id": state.RunID(),
+					"run_id": state.RunID,
 				},
 			})
 		}
@@ -458,7 +461,7 @@ func (g *stateGraph) execute(ctx context.Context, startNode string, initialState
 			})
 
 			if !g.preserveCheckpoints && g.checkpointInterval > 0 {
-				g.checkpointStore.Delete(state.RunID())
+				g.checkpointStore.Delete(state.RunID)
 			}
 
 			return state, nil
@@ -496,9 +499,11 @@ func (g *stateGraph) execute(ctx context.Context, startNode string, initialState
 					Timestamp: time.Now(),
 					Source:    g.name,
 					Data: map[string]any{
-						"from":       edge.From,
-						"to":         edge.To,
-						"edge_index": i,
+						"from":             edge.From,
+						"to":               edge.To,
+						"edge_index":       i,
+						"predicate_name":   edge.Name,
+						"predicate_result": true,
 					},
 				})
 

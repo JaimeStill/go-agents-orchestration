@@ -14,15 +14,15 @@ func TestState_CheckpointMetadata(t *testing.T) {
 	observer := observability.NoOpObserver{}
 	s := state.New(observer)
 
-	if s.RunID() == "" {
+	if s.RunID == "" {
 		t.Error("Expected non-empty RunID")
 	}
 
-	if s.CheckpointNode() != "" {
-		t.Errorf("Expected empty CheckpointNode, got %s", s.CheckpointNode())
+	if s.CheckpointNode != "" {
+		t.Errorf("Expected empty CheckpointNode, got %s", s.CheckpointNode)
 	}
 
-	if s.Timestamp().IsZero() {
+	if s.Timestamp.IsZero() {
 		t.Error("Expected non-zero Timestamp")
 	}
 }
@@ -31,26 +31,26 @@ func TestState_SetCheckpointNode(t *testing.T) {
 	observer := observability.NoOpObserver{}
 	s := state.New(observer)
 
-	originalTime := s.Timestamp()
-	originalRunID := s.RunID()
+	originalTime := s.Timestamp
+	originalRunID := s.RunID
 
 	time.Sleep(10 * time.Millisecond)
 
 	s2 := s.SetCheckpointNode("node1")
 
-	if s2.CheckpointNode() != "node1" {
-		t.Errorf("Expected CheckpointNode 'node1', got %s", s2.CheckpointNode())
+	if s2.CheckpointNode != "node1" {
+		t.Errorf("Expected CheckpointNode 'node1', got %s", s2.CheckpointNode)
 	}
 
-	if s2.RunID() != originalRunID {
+	if s2.RunID != originalRunID {
 		t.Error("Expected RunID to be preserved")
 	}
 
-	if !s2.Timestamp().After(originalTime) {
+	if !s2.Timestamp.After(originalTime) {
 		t.Error("Expected Timestamp to be updated")
 	}
 
-	if s.CheckpointNode() != "" {
+	if s.CheckpointNode != "" {
 		t.Error("Expected original State to be unchanged (immutability)")
 	}
 }
@@ -63,15 +63,15 @@ func TestState_Clone_PreservesCheckpointMetadata(t *testing.T) {
 
 	cloned := s.Clone()
 
-	if cloned.RunID() != s.RunID() {
+	if cloned.RunID != s.RunID {
 		t.Error("Expected RunID to be preserved in clone")
 	}
 
-	if cloned.CheckpointNode() != s.CheckpointNode() {
+	if cloned.CheckpointNode != s.CheckpointNode {
 		t.Error("Expected CheckpointNode to be preserved in clone")
 	}
 
-	if !cloned.Timestamp().Equal(s.Timestamp()) {
+	if !cloned.Timestamp.Equal(s.Timestamp) {
 		t.Error("Expected Timestamp to be preserved in clone")
 	}
 
@@ -85,21 +85,21 @@ func TestState_Set_PreservesCheckpointMetadata(t *testing.T) {
 	observer := observability.NoOpObserver{}
 	s := state.New(observer).SetCheckpointNode("node1")
 
-	originalRunID := s.RunID()
-	originalNode := s.CheckpointNode()
-	originalTime := s.Timestamp()
+	originalRunID := s.RunID
+	originalNode := s.CheckpointNode
+	originalTime := s.Timestamp
 
 	s2 := s.Set("key", "value")
 
-	if s2.RunID() != originalRunID {
+	if s2.RunID != originalRunID {
 		t.Error("Expected RunID to be preserved through Set")
 	}
 
-	if s2.CheckpointNode() != originalNode {
+	if s2.CheckpointNode != originalNode {
 		t.Error("Expected CheckpointNode to be preserved through Set")
 	}
 
-	if !s2.Timestamp().Equal(originalTime) {
+	if !s2.Timestamp.Equal(originalTime) {
 		t.Error("Expected Timestamp to be preserved through Set")
 	}
 }
@@ -115,11 +115,11 @@ func TestState_Merge_PreservesCheckpointMetadata(t *testing.T) {
 
 	merged := s1.Merge(s2)
 
-	if merged.RunID() != s1.RunID() {
+	if merged.RunID != s1.RunID {
 		t.Error("Expected RunID from first State to be preserved")
 	}
 
-	if merged.CheckpointNode() != s1.CheckpointNode() {
+	if merged.CheckpointNode != s1.CheckpointNode {
 		t.Error("Expected CheckpointNode from first State to be preserved")
 	}
 
@@ -146,16 +146,16 @@ func TestMemoryCheckpointStore_SaveAndLoad(t *testing.T) {
 		t.Fatalf("Save failed: %v", err)
 	}
 
-	loaded, err := store.Load(s.RunID())
+	loaded, err := store.Load(s.RunID)
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if loaded.RunID() != s.RunID() {
+	if loaded.RunID != s.RunID {
 		t.Error("Expected loaded RunID to match")
 	}
 
-	if loaded.CheckpointNode() != s.CheckpointNode() {
+	if loaded.CheckpointNode != s.CheckpointNode {
 		t.Error("Expected loaded CheckpointNode to match")
 	}
 
@@ -183,11 +183,11 @@ func TestMemoryCheckpointStore_Delete(t *testing.T) {
 		t.Fatalf("Save failed: %v", err)
 	}
 
-	if err := store.Delete(s.RunID()); err != nil {
+	if err := store.Delete(s.RunID); err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
 
-	_, err := store.Load(s.RunID())
+	_, err := store.Load(s.RunID)
 	if err == nil {
 		t.Error("Expected error when loading deleted checkpoint")
 	}
@@ -219,10 +219,10 @@ func TestMemoryCheckpointStore_List(t *testing.T) {
 
 	found1, found2 := false, false
 	for _, id := range list {
-		if id == s1.RunID() {
+		if id == s1.RunID {
 			found1 = true
 		}
-		if id == s2.RunID() {
+		if id == s2.RunID {
 			found2 = true
 		}
 	}
@@ -247,7 +247,7 @@ func TestMemoryCheckpointStore_Overwrite(t *testing.T) {
 		t.Fatalf("Second save failed: %v", err)
 	}
 
-	loaded, err := store.Load(s.RunID())
+	loaded, err := store.Load(s.RunID)
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
@@ -257,8 +257,8 @@ func TestMemoryCheckpointStore_Overwrite(t *testing.T) {
 		t.Errorf("Expected value2 (overwritten), got %v", val)
 	}
 
-	if loaded.CheckpointNode() != "node2" {
-		t.Errorf("Expected node2, got %s", loaded.CheckpointNode())
+	if loaded.CheckpointNode != "node2" {
+		t.Errorf("Expected node2, got %s", loaded.CheckpointNode)
 	}
 }
 
@@ -320,7 +320,7 @@ func TestGraph_Checkpoint_Disabled(t *testing.T) {
 		t.Fatalf("Execute failed: %v", err)
 	}
 
-	if finalState.CheckpointNode() == "" {
+	if finalState.CheckpointNode == "" {
 		t.Error("Expected CheckpointNode to be set even with checkpointing disabled")
 	}
 }
@@ -349,7 +349,7 @@ func TestGraph_Checkpoint_SaveAtInterval(t *testing.T) {
 
 	observer := observability.NoOpObserver{}
 	initialState := state.New(observer)
-	runID := initialState.RunID()
+	runID := initialState.RunID
 
 	_, err = graph.Execute(context.Background(), initialState)
 	if err != nil {
@@ -385,7 +385,7 @@ func TestGraph_Checkpoint_PreserveOnSuccess(t *testing.T) {
 
 	observer := observability.NoOpObserver{}
 	initialState := state.New(observer)
-	runID := initialState.RunID()
+	runID := initialState.RunID
 
 	_, err = graph.Execute(context.Background(), initialState)
 	if err != nil {
@@ -398,8 +398,8 @@ func TestGraph_Checkpoint_PreserveOnSuccess(t *testing.T) {
 		t.Errorf("Expected checkpoint to be preserved, got error: %v", err)
 	}
 
-	if loaded.CheckpointNode() != "node2" {
-		t.Errorf("Expected final checkpoint at node2, got %s", loaded.CheckpointNode())
+	if loaded.CheckpointNode != "node2" {
+		t.Errorf("Expected final checkpoint at node2, got %s", loaded.CheckpointNode)
 	}
 
 	store.Delete(runID)
@@ -430,15 +430,15 @@ func TestGraph_Resume_FromCheckpoint(t *testing.T) {
 
 	observer := observability.NoOpObserver{}
 	initialState := state.New(observer)
-	runID := initialState.RunID()
+	runID := initialState.RunID
 
 	partialState, err := graph.Execute(context.Background(), initialState)
 	if err != nil {
 		t.Fatalf("Execute failed: %v", err)
 	}
 
-	if partialState.CheckpointNode() != "node3" {
-		t.Errorf("Expected checkpoint at node3, got %s", partialState.CheckpointNode())
+	if partialState.CheckpointNode != "node3" {
+		t.Errorf("Expected checkpoint at node3, got %s", partialState.CheckpointNode)
 	}
 
 	store, _ := state.GetCheckpointStore("memory")
@@ -450,7 +450,7 @@ func TestGraph_Resume_FromCheckpoint(t *testing.T) {
 		t.Fatalf("Resume failed: %v", err)
 	}
 
-	if resumedState.RunID() != runID {
+	if resumedState.RunID != runID {
 		t.Error("Expected RunID to be preserved through resume")
 	}
 
@@ -524,7 +524,7 @@ func TestGraph_Resume_AtExitPoint(t *testing.T) {
 
 	observer := observability.NoOpObserver{}
 	initialState := state.New(observer)
-	runID := initialState.RunID()
+	runID := initialState.RunID
 
 	_, err = graph.Execute(context.Background(), initialState)
 	if err != nil {
@@ -554,12 +554,12 @@ func TestState_Checkpoint_Method(t *testing.T) {
 		t.Fatalf("Checkpoint method failed: %v", err)
 	}
 
-	loaded, err := store.Load(s.RunID())
+	loaded, err := store.Load(s.RunID)
 	if err != nil {
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if loaded.RunID() != s.RunID() {
+	if loaded.RunID != s.RunID {
 		t.Error("Expected loaded state to match")
 	}
 }

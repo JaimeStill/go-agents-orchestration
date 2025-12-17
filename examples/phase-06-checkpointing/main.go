@@ -212,7 +212,7 @@ Keep responses to 1-2 sentences focusing on key findings or actions.`
 	initialState := state.New(observer)
 	initialState = initialState.Set("dataset", "climate-research-2024")
 
-	runID := initialState.RunID()
+	runID := initialState.RunID
 	fmt.Printf("Pipeline RunID: %s\n", runID)
 
 	startTime := time.Now()
@@ -223,7 +223,7 @@ Keep responses to 1-2 sentences focusing on key findings or actions.`
 	if err != nil {
 		fmt.Printf("❌ EXECUTION FAILED after %.2fs\n", executionTime.Seconds())
 		fmt.Printf("   Error: %v\n", err)
-		fmt.Printf("   Checkpoint saved at: %s\n", finalState.CheckpointNode())
+		fmt.Printf("   Checkpoint saved at: %s\n", finalState.CheckpointNode)
 		fmt.Println()
 	} else {
 		fmt.Printf("✓ Execution completed in %.2fs\n", executionTime.Seconds())
@@ -236,7 +236,7 @@ Keep responses to 1-2 sentences focusing on key findings or actions.`
 	fmt.Println()
 
 	fmt.Printf("Resuming pipeline from RunID: %s\n", runID)
-	fmt.Printf("Last completed stage: %s\n", finalState.CheckpointNode())
+	fmt.Printf("Last completed stage: %s\n", finalState.CheckpointNode)
 	fmt.Println()
 
 	fmt.Println("Note: Stages 1-2 will be skipped (already completed)")
