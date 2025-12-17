@@ -68,11 +68,11 @@ graph.SetExitPoint("report")
 initialState := state.New(observer)
 initialState = initialState.Set("dataset", "climate-research-2024")
 
-runID := initialState.RunID()  // Capture for resume
+runID := initialState.RunID  // Capture for resume
 
 state, err := graph.Execute(ctx, initialState)
 // err: "analysis interrupted: simulated system failure"
-// state.CheckpointNode(): "preprocess" (last successful stage)
+// state.CheckpointNode: "preprocess" (last successful stage)
 
 // Resume execution
 state, err = graph.Resume(ctx, runID)
@@ -88,17 +88,17 @@ State carries checkpoint provenance through execution:
 
 ```go
 type State struct {
-    data           map[string]any    // Workflow data
-    observer       observability.Observer
-    runID          string             // Execution identifier (UUID)
-    checkpointNode string             // Last checkpointed node
-    timestamp      time.Time          // Creation/checkpoint time
+    Data           map[string]any         `json:"data"`
+    Observer       observability.Observer `json:"-"`
+    RunID          string                 `json:"run_id"`
+    CheckpointNode string                 `json:"checkpoint_node"`
+    Timestamp      time.Time              `json:"timestamp"`
 }
 
-// Accessors
-state.RunID()           // "8f9b50d4-385c-4b46-90b8-785c5e453254"
-state.CheckpointNode()  // "preprocess"
-state.Timestamp()       // 2025-11-12 10:56:58
+// Direct field access
+state.RunID           // "8f9b50d4-385c-4b46-90b8-785c5e453254"
+state.CheckpointNode  // "preprocess"
+state.Timestamp       // 2025-11-12 10:56:58
 ```
 
 ## Key Concepts
@@ -479,7 +479,7 @@ reviewNode := state.NewFunctionNode(func(ctx context.Context, s state.State) (st
 
 **Debug**:
 ```go
-fmt.Printf("Checkpoint at: %s\n", state.CheckpointNode())
+fmt.Printf("Checkpoint at: %s\n", state.CheckpointNode)
 fmt.Printf("Resume will skip to next node after checkpoint\n")
 ```
 
@@ -556,7 +556,7 @@ if !firstExecutionFailed && analysisAttempts == 1 {
 ```go
 initialState := state.New(observer)
 initialState = initialState.Set("dataset", "climate-research-2024")
-runID := initialState.RunID()  // Needed for Resume
+runID := initialState.RunID  // Needed for Resume
 ```
 
 **Lines 272-275**: Resume execution

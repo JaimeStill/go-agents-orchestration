@@ -75,7 +75,7 @@ type State struct {
 
 ### Checkpoint Identifier
 
-**Single ID per run** (overwrite model): State.RunID() serves as checkpoint identifier
+**Single ID per run** (overwrite model): State.RunID serves as checkpoint identifier
 **Simpler**: Each save overwrites previous checkpoint for that run
 **Future-proof**: Can add granular restore if needed
 
@@ -196,7 +196,7 @@ if g.checkpointInterval > 0 && iterations%g.checkpointInterval == 0 {
 3. **Cleanup on success** (before exit point return):
 ```go
 if !g.preserveCheckpoints && g.checkpointInterval > 0 {
-    g.checkpointStore.Delete(state.RunID())
+    g.checkpointStore.Delete(state.RunID)
 }
 ```
 

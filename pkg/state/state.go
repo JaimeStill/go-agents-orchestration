@@ -22,36 +22,11 @@ import (
 // provenance for workflow persistence and recovery. This metadata flows through
 // all State transformations maintaining execution identity.
 type State struct {
-	data           map[string]any
-	observer       observability.Observer
-	runID          string
-	checkpointNode string
-	timestamp      time.Time
-}
-
-// RunID returns the unique identifier for this execution run.
-//
-// The RunID is generated once when State is created and preserved through all
-// transformations (Clone, Set, Merge). It serves as the checkpoint identifier
-// for workflow persistence and recovery.
-func (s State) RunID() string {
-	return s.runID
-}
-
-// CheckpointNode returns the name of the last node where execution was checkpointed.
-//
-// This field tracks which node completed execution before the checkpoint was saved.
-// When resuming, execution continues from the next node after CheckpointNode.
-func (s State) CheckpointNode() string {
-	return s.checkpointNode
-}
-
-// Timestamp returns the time when this State was created or last checkpointed.
-//
-// The timestamp is set during State creation and updated when SetCheckpointNode
-// is called. It provides temporal context for execution provenance.
-func (s State) Timestamp() time.Time {
-	return s.timestamp
+	Data           map[string]any         `json:"data"`
+	Observer       observability.Observer `json:"-"`
+	RunID          string                 `json:"run_id"`
+	CheckpointNode string                 `json:"checkpoint_node"`
+	Timestamp      time.Time              `json:"timestamp"`
 }
 
 // New creates a new empty State with the given observer.
@@ -70,15 +45,15 @@ func New(observer observability.Observer) State {
 	}
 
 	s := State{
-		data:      make(map[string]any),
-		observer:  observer,
-		runID:     uuid.New().String(),
-		timestamp: time.Now(),
+		Data:      make(map[string]any),
+		Observer:  observer,
+		RunID:     uuid.New().String(),
+		Timestamp: time.Now(),
 	}
 
 	observer.OnEvent(context.Background(), observability.Event{
 		Type:      observability.EventStateCreate,
-		Timestamp: s.timestamp,
+		Timestamp: s.Timestamp,
 		Source:    "state",
 		Data:      map[string]any{},
 	})
@@ -101,18 +76,18 @@ func New(observer observability.Observer) State {
 //	// original still has "value", cloned has "modified"
 func (s State) Clone() State {
 	newState := State{
-		data:           maps.Clone(s.data),
-		observer:       s.observer,
-		runID:          s.runID,
-		checkpointNode: s.checkpointNode,
-		timestamp:      s.timestamp,
+		Data:           maps.Clone(s.Data),
+		Observer:       s.Observer,
+		RunID:          s.RunID,
+		CheckpointNode: s.CheckpointNode,
+		Timestamp:      s.Timestamp,
 	}
 
-	s.observer.OnEvent(context.Background(), observability.Event{
+	s.Observer.OnEvent(context.Background(), observability.Event{
 		Type:      observability.EventStateClone,
 		Timestamp: time.Now(),
 		Source:    "state",
-		Data:      map[string]any{"keys": len(newState.data)},
+		Data:      map[string]any{"keys": len(newState.Data)},
 	})
 
 	return newState
@@ -131,7 +106,7 @@ func (s State) Clone() State {
 //	}
 //	user := value.(string)  // Type assertion required due to any type
 func (s State) Get(key string) (any, bool) {
-	val, exists := s.data[key]
+	val, exists := s.Data[key]
 	return val, exists
 }
 
@@ -150,9 +125,9 @@ func (s State) Get(key string) (any, bool) {
 //	// s1 is empty, s2 has user, s3 has user+count
 func (s State) Set(key string, value any) State {
 	newState := s.Clone()
-	newState.data[key] = value
+	newState.Data[key] = value
 
-	s.observer.OnEvent(context.Background(), observability.Event{
+	s.Observer.OnEvent(context.Background(), observability.Event{
 		Type:      observability.EventStateSet,
 		Timestamp: time.Now(),
 		Source:    "state",
@@ -178,8 +153,8 @@ func (s State) Set(key string, value any) State {
 //	// s2 has checkpoint metadata, s1 is unchanged
 func (s State) SetCheckpointNode(node string) State {
 	newState := s.Clone()
-	newState.checkpointNode = node
-	newState.timestamp = time.Now()
+	newState.CheckpointNode = node
+	newState.Timestamp = time.Now()
 	return newState
 }
 
@@ -200,13 +175,13 @@ func (s State) SetCheckpointNode(node string) State {
 //	// merged has: user=alice, role=user (overwritten), count=42
 func (s State) Merge(other State) State {
 	newState := s.Clone()
-	maps.Copy(newState.data, other.data)
+	maps.Copy(newState.Data, other.Data)
 
-	s.observer.OnEvent(context.Background(), observability.Event{
+	s.Observer.OnEvent(context.Background(), observability.Event{
 		Type:      observability.EventStateMerge,
 		Timestamp: time.Now(),
 		Source:    "state",
-		Data:      map[string]any{"keys": len(other.data)},
+		Data:      map[string]any{"keys": len(other.Data)},
 	})
 
 	return newState

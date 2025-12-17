@@ -13,6 +13,10 @@ type Edge struct {
 	// To is the destination node name
 	To string
 
+	// Name is an optional identifier for the edge, typically used to describe
+	// the predicate function being evaluated (e.g., "isApproved", "hasError")
+	Name string
+
 	// Predicate determines if this edge can be traversed (nil = always transition)
 	Predicate TransitionPredicate
 }

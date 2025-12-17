@@ -64,7 +64,7 @@ func (m *memoryCheckpointStore) Save(state State) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.states[state.RunID()] = state
+	m.states[state.RunID] = state
 	return nil
 }
 

@@ -160,7 +160,7 @@ func main() {
 func executeWithFailure(ctx context.Context, graph state.StateGraph, initialState state.State, failStage FailureStage, config *WorkflowConfig) (state.State, error) {
 	fmt.Printf("NOTE: Failure injection enabled at stage: %s\n\n", failStage)
 
-	runID := initialState.RunID()
+	runID := initialState.RunID
 
 	failedState, err := graph.Execute(ctx, initialState)
 
@@ -169,7 +169,7 @@ func executeWithFailure(ctx context.Context, graph state.StateGraph, initialStat
 	}
 
 	fmt.Printf("\n✗ SIMULATED FAILURE at %s stage\n", failStage)
-	checkpointNode := failedState.CheckpointNode()
+	checkpointNode := failedState.CheckpointNode
 	fmt.Printf("Checkpoint saved: %s (runID: %s)\n", checkpointNode, runID)
 
 	fmt.Println("\n=== Resuming from Checkpoint ===")
