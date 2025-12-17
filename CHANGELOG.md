@@ -1,5 +1,29 @@
 # Changelog
 
+## [v0.2.0] - 2025-12-17
+
+Breaking API changes to support JSON serialization of State for checkpoint persistence.
+
+**Breaking**:
+
+- `pkg/state` - State struct fields are now public with JSON tags
+
+  Changed from private fields with getter methods to public fields with JSON serialization support. The `Data`, `RunID`, `CheckpointNode`, and `Timestamp` fields are now exported. The `Observer` field is excluded from JSON serialization via `json:"-"` tag. This enables direct JSON marshaling/unmarshaling for checkpoint persistence without intermediate transformation structs.
+
+- `pkg/state` - Removed redundant getter methods from State
+
+  Removed `RunID()`, `CheckpointNode()`, and `Timestamp()` methods. Access these values directly via fields: `state.RunID`, `state.CheckpointNode`, `state.Timestamp`.
+
+**Added**:
+
+- `pkg/state` - Edge.Name field for predicate identification
+
+  Added optional `Name` field to Edge struct for identifying predicates during routing decisions. Enables observers to record which predicate was evaluated when capturing workflow execution history.
+
+- `pkg/state` - Enhanced observer events with state snapshots and predicate details
+
+  EventNodeStart now includes `input_snapshot` containing state data before node execution. EventNodeComplete now includes `output_snapshot` containing state data after node execution. EventEdgeTransition now includes `predicate_name` and `predicate_result` fields for routing decision audit trails.
+
 ## [v0.1.0] - 2025-11-12
 
 Initial pre-release.
