@@ -113,6 +113,24 @@ func NewGraph(cfg config.GraphConfig) (StateGraph, error) {
 	}, nil
 }
 
+func NewGraphWithDeps(cfg config.GraphConfig, observer observability.Observer, checkpointStore CheckpointStore) (StateGraph, error) {
+	if observer == nil {
+		observer = observability.NoOpObserver{}
+	}
+
+	return &stateGraph{
+		name:                cfg.Name,
+		nodes:               make(map[string]StateNode),
+		edges:               make(map[string][]Edge),
+		exitPoints:          make(map[string]bool),
+		maxIterations:       cfg.MaxIterations,
+		observer:            observer,
+		checkpointStore:     checkpointStore,
+		checkpointInterval:  cfg.Checkpoint.Interval,
+		preserveCheckpoints: cfg.Checkpoint.Preserve,
+	}, nil
+}
+
 // AddNode registers a computation step in the graph.
 //
 // Nodes must have unique names. Adding a duplicate node returns an error.

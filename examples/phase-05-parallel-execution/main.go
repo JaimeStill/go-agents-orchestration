@@ -104,12 +104,13 @@ Respond in format: "SENTIMENT" where SENTIMENT is one word: positive, neutral, o
 
 	parallelConfig := config.DefaultParallelConfig()
 	parallelConfig.Observer = "slog"
-	parallelConfig.FailFast = false
+	failFast := false
+	parallelConfig.FailFastNil = &failFast
 	parallelConfig.WorkerCap = 4
 
 	fmt.Printf("  ✓ Parallel configuration ready\n")
 	fmt.Printf("    Worker cap: %d\n", parallelConfig.WorkerCap)
-	fmt.Printf("    Fail-fast: %v (collect all errors)\n", parallelConfig.FailFast)
+	fmt.Printf("    Fail-fast: %v (collect all errors)\n", parallelConfig.FailFast())
 	fmt.Println()
 
 	// ============================================================================

@@ -27,3 +27,21 @@ func DefaultHubConfig() HubConfig {
 		Logger:            slog.Default(),
 	}
 }
+
+func (c *HubConfig) Merge(source *HubConfig) {
+	if source.Name != "" {
+		c.Name = source.Name
+	}
+
+	if source.ChannelBufferSize > 0 {
+		c.ChannelBufferSize = source.ChannelBufferSize
+	}
+
+	if source.DefaultTimeout > 0 {
+		c.DefaultTimeout = source.DefaultTimeout
+	}
+
+	if source.Logger != nil {
+		c.Logger = source.Logger
+	}
+}

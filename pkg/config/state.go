@@ -38,6 +38,20 @@ func DefaultCheckpointConfig() CheckpointConfig {
 	}
 }
 
+func (c *CheckpointConfig) Merge(source *CheckpointConfig) {
+	if source.Store != "" {
+		c.Store = source.Store
+	}
+
+	if source.Interval > 0 {
+		c.Interval = source.Interval
+	}
+
+	if source.Preserve {
+		c.Preserve = source.Preserve
+	}
+}
+
 // GraphConfig defines configuration for state graph execution.
 //
 // This configuration follows the go-agents pattern: used only during initialization,
@@ -89,4 +103,20 @@ func DefaultGraphConfig(name string) GraphConfig {
 		MaxIterations: 1000,
 		Checkpoint:    DefaultCheckpointConfig(),
 	}
+}
+
+func (c *GraphConfig) Merge(source *GraphConfig) {
+	if source.Name != "" {
+		c.Name = source.Name
+	}
+
+	if source.Observer != "" {
+		c.Observer = source.Observer
+	}
+
+	if source.MaxIterations > 0 {
+		c.MaxIterations = source.MaxIterations
+	}
+
+	c.Checkpoint.Merge(&source.Checkpoint)
 }

@@ -121,11 +121,12 @@ func TestProcessParallel_OrderPreservation(t *testing.T) {
 
 func TestProcessParallel_FailFastMode_SingleError(t *testing.T) {
 	ctx := context.Background()
+	failFast := true
 	cfg := config.ParallelConfig{
-		MaxWorkers: 4,
-		WorkerCap:  16,
-		FailFast:   true,
-		Observer:   "noop",
+		MaxWorkers:  4,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "noop",
 	}
 	items := make([]int, 100)
 	for i := range items {
@@ -163,11 +164,12 @@ func TestProcessParallel_FailFastMode_SingleError(t *testing.T) {
 
 func TestProcessParallel_CollectAllErrorsMode_AllSuccess(t *testing.T) {
 	ctx := context.Background()
+	failFast := false
 	cfg := config.ParallelConfig{
-		MaxWorkers: 4,
-		WorkerCap:  16,
-		FailFast:   false,
-		Observer:   "noop",
+		MaxWorkers:  4,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "noop",
 	}
 	items := []int{1, 2, 3, 4, 5}
 
@@ -190,11 +192,12 @@ func TestProcessParallel_CollectAllErrorsMode_AllSuccess(t *testing.T) {
 
 func TestProcessParallel_CollectAllErrorsMode_PartialFailure(t *testing.T) {
 	ctx := context.Background()
+	failFast := false
 	cfg := config.ParallelConfig{
-		MaxWorkers: 4,
-		WorkerCap:  16,
-		FailFast:   false,
-		Observer:   "noop",
+		MaxWorkers:  4,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "noop",
 	}
 	items := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -238,11 +241,12 @@ func TestProcessParallel_CollectAllErrorsMode_PartialFailure(t *testing.T) {
 
 func TestProcessParallel_CollectAllErrorsMode_AllFailures(t *testing.T) {
 	ctx := context.Background()
+	failFast := false
 	cfg := config.ParallelConfig{
-		MaxWorkers: 4,
-		WorkerCap:  16,
-		FailFast:   false,
-		Observer:   "noop",
+		MaxWorkers:  4,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "noop",
 	}
 	items := []int{1, 2, 3, 4, 5}
 
@@ -311,11 +315,12 @@ func TestProcessParallel_ContextCancellation(t *testing.T) {
 
 func TestProcessParallel_WorkerPoolSizing_MaxWorkers(t *testing.T) {
 	ctx := context.Background()
+	failFast := true
 	cfg := config.ParallelConfig{
-		MaxWorkers: 2,
-		WorkerCap:  16,
-		FailFast:   true,
-		Observer:   "noop",
+		MaxWorkers:  2,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "noop",
 	}
 	items := make([]int, 20)
 	for i := range items {
@@ -396,11 +401,12 @@ func TestProcessParallel_ProgressCallback(t *testing.T) {
 
 func TestProcessParallel_ProgressCallback_OnlyCalledOnSuccess(t *testing.T) {
 	ctx := context.Background()
+	failFast := false
 	cfg := config.ParallelConfig{
-		MaxWorkers: 4,
-		WorkerCap:  16,
-		FailFast:   false,
-		Observer:   "noop",
+		MaxWorkers:  4,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "noop",
 	}
 	items := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -438,11 +444,12 @@ func TestProcessParallel_ProgressCallback_OnlyCalledOnSuccess(t *testing.T) {
 
 func TestProcessParallel_TaskError_PreservesContext(t *testing.T) {
 	ctx := context.Background()
+	failFast := false
 	cfg := config.ParallelConfig{
-		MaxWorkers: 4,
-		WorkerCap:  16,
-		FailFast:   false,
-		Observer:   "noop",
+		MaxWorkers:  4,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "noop",
 	}
 	items := []string{"a", "b", "c", "d", "e"}
 
@@ -589,11 +596,12 @@ func TestParallelError_Unwrap(t *testing.T) {
 
 func TestProcessParallel_InvalidObserver(t *testing.T) {
 	ctx := context.Background()
+	failFast := true
 	cfg := config.ParallelConfig{
-		MaxWorkers: 4,
-		WorkerCap:  16,
-		FailFast:   true,
-		Observer:   "invalid-observer-name",
+		MaxWorkers:  4,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "invalid-observer-name",
 	}
 	items := []int{1, 2, 3}
 

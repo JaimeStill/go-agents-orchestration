@@ -102,9 +102,12 @@ func (m *memoryCheckpointStore) List() ([]string, error) {
 //
 // The "memory" store is registered by default. Custom stores can be added via
 // RegisterCheckpointStore before graph initialization.
-var checkpointStores = map[string]CheckpointStore{
-	"memory": NewMemoryCheckpointStore(),
-}
+var (
+	checkpointStores = map[string]CheckpointStore{
+		"memory": NewMemoryCheckpointStore(),
+	}
+	mutex sync.RWMutex
+)
 
 // GetCheckpointStore retrieves a CheckpointStore by name from the registry.
 //
@@ -121,6 +124,9 @@ var checkpointStores = map[string]CheckpointStore{
 //	    log.Fatal(err)
 //	}
 func GetCheckpointStore(name string) (CheckpointStore, error) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
 	store, exists := checkpointStores[name]
 	if !exists {
 		return nil, fmt.Errorf("unknown checkpoint store: %s", name)
@@ -142,5 +148,8 @@ func GetCheckpointStore(name string) (CheckpointStore, error) {
 //	cfg.Checkpoint.Store = "disk"
 //	cfg.Checkpoint.Interval = 10
 func RegisterCheckpointStore(name string, store CheckpointStore) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	checkpointStores[name] = store
 }
