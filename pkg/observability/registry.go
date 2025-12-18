@@ -3,14 +3,18 @@ package observability
 import (
 	"fmt"
 	"log/slog"
+	"sync"
 )
 
 // observers registry maps observer names to implementations.
 // Initialized with "noop" observer for zero-overhead observability.
-var observers = map[string]Observer{
-	"noop": NoOpObserver{},
-	"slog": NewSlogObserver(slog.Default()),
-}
+var (
+	observers = map[string]Observer{
+		"noop": NoOpObserver{},
+		"slog": NewSlogObserver(slog.Default()),
+	}
+	mutex sync.RWMutex
+)
 
 // GetObserver retrieves a registered observer by name.
 //
@@ -26,6 +30,9 @@ var observers = map[string]Observer{
 //	    log.Fatal(err)
 //	}
 func GetObserver(name string) (Observer, error) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
 	obs, exists := observers[name]
 	if !exists {
 		return nil, fmt.Errorf("unknown observer: %s", name)
@@ -52,5 +59,8 @@ func GetObserver(name string) (Observer, error) {
 //
 //	observability.RegisterObserver("my-observer", &MyObserver{logger})
 func RegisterObserver(name string, observer Observer) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	observers[name] = observer
 }

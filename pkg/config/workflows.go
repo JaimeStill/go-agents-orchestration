@@ -39,6 +39,16 @@ func DefaultChainConfig() ChainConfig {
 	}
 }
 
+func (c *ChainConfig) Merge(source *ChainConfig) {
+	if c.CaptureIntermediateStates {
+		c.CaptureIntermediateStates = source.CaptureIntermediateStates
+	}
+
+	if source.Observer != "" {
+		c.Observer = source.Observer
+	}
+}
+
 // ParallelConfig defines configuration for parallel execution pattern.
 //
 // This configuration controls worker pool sizing, error handling behavior, and
@@ -76,11 +86,19 @@ type ParallelConfig struct {
 	// WorkerCap limits auto-detected workers (default: 16)
 	WorkerCap int `json:"worker_cap"`
 
-	// FailFast stops on first error when true (default: true)
-	FailFast bool `json:"fail_fast"`
+	// FailFastNil controls error handling behavior. Use FailFast() method to access.
+	// When nil, defaults to true. Use pointer to distinguish unset from explicit false.
+	FailFastNil *bool `json:"fail_fast"`
 
 	// Observer specifies which observer implementation to use ("noop", "slog", etc.)
 	Observer string `json:"observer"`
+}
+
+func (c *ParallelConfig) FailFast() bool {
+	if c.FailFastNil == nil {
+		return true
+	}
+	return *c.FailFastNil
 }
 
 // DefaultParallelConfig returns sensible defaults for parallel execution.
@@ -95,11 +113,30 @@ type ParallelConfig struct {
 // For CPU-bound work, consider setting MaxWorkers to runtime.NumCPU().
 // For I/O-bound work (agent API calls), the 2x multiplier provides good throughput.
 func DefaultParallelConfig() ParallelConfig {
+	failFast := true
 	return ParallelConfig{
-		MaxWorkers: 0,
-		WorkerCap:  16,
-		FailFast:   true,
-		Observer:   "slog",
+		MaxWorkers:  0,
+		WorkerCap:   16,
+		FailFastNil: &failFast,
+		Observer:    "slog",
+	}
+}
+
+func (c *ParallelConfig) Merge(source *ParallelConfig) {
+	if source.MaxWorkers > 0 {
+		c.MaxWorkers = source.MaxWorkers
+	}
+
+	if source.WorkerCap > 0 {
+		c.WorkerCap = source.WorkerCap
+	}
+
+	if source.FailFastNil != nil {
+		c.FailFastNil = source.FailFastNil
+	}
+
+	if source.Observer != "" {
+		c.Observer = source.Observer
 	}
 }
 
@@ -110,5 +147,11 @@ type ConditionalConfig struct {
 func DefaultConditionalConfig() ConditionalConfig {
 	return ConditionalConfig{
 		Observer: "slog",
+	}
+}
+
+func (c *ConditionalConfig) Merge(source *ConditionalConfig) {
+	if source.Observer != "" {
+		c.Observer = source.Observer
 	}
 }

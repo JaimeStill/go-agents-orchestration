@@ -45,7 +45,7 @@
 //	    return response.Content(), nil
 //	}
 //
-//	cfg := config.DefaultParallelConfig() // FailFast: true
+//	cfg := config.DefaultParallelConfig() // FailFast() returns true
 //	result, err := workflows.ProcessParallel(ctx, cfg, questions, processor, nil)
 //	if err != nil {
 //	    log.Fatal(err) // First error stops all processing
@@ -53,9 +53,10 @@
 //
 // Example with collect-all-errors mode:
 //
+//	failFast := false
 //	cfg := config.ParallelConfig{
-//	    FailFast: false,
-//	    Observer: "slog",
+//	    FailFastNil: &failFast,
+//	    Observer:    "slog",
 //	}
 //	result, err := workflows.ProcessParallel(ctx, cfg, items, processor, nil)
 //	if err != nil {

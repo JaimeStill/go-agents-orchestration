@@ -1,5 +1,31 @@
 # Changelog
 
+## [v0.3.0] - 2025-12-18
+
+**Breaking**:
+
+- `pkg/config` - ParallelConfig.FailFast field renamed to FailFastNil with accessor method
+
+  The `FailFast` field is now `FailFastNil *bool` with a `FailFast()` method that handles nil-checking and returns the effective boolean value (defaulting to true when nil). This enables distinguishing between "not set" (nil, uses default true) and "explicitly set to false", which is required for proper Merge behavior where unspecified fields preserve defaults.
+
+**Added**:
+
+- `pkg/config` - Merge methods for configuration composition
+
+  Added `Merge(*Config)` methods to all configuration types following the go-agents pattern. Enables layered configuration where loaded configs merge over defaults, with zero-values preserved from defaults.
+
+- `pkg/state` - NewGraphWithDeps for dependency injection
+
+  Added `NewGraphWithDeps(cfg, observer, checkpointStore)` constructor that accepts Observer and CheckpointStore instances directly instead of resolving from global registries. Enables cleaner integration where callers manage their own instances (e.g., per-execution database-backed stores).
+
+- `pkg/state` - Thread-safe checkpoint store registry
+
+  Added `sync.RWMutex` protection to the checkpoint store registry. `GetCheckpointStore` and `RegisterCheckpointStore` are now safe for concurrent use.
+
+- `pkg/observability` - Thread-safe observer registry
+
+  Added `sync.RWMutex` protection to the observer registry. `GetObserver` and `RegisterObserver` are now safe for concurrent use.
+
 ## [v0.2.0] - 2025-12-17
 
 Breaking API changes to support JSON serialization of State for checkpoint persistence.

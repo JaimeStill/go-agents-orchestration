@@ -356,10 +356,11 @@ Provide your response in your directed JSON format.`,
 			return newState
 		}
 
+		failFast := true
 		parallelCfg := config.ParallelConfig{
-			Observer:   wc.ObserverName(),
-			FailFast:   true,
-			MaxWorkers: 2,
+			Observer:    wc.ObserverName(),
+			FailFastNil: &failFast,
+			MaxWorkers:  2,
 		}
 
 		parallelNode := workflows.ParallelNode(parallelCfg, tasks, processor, nil, aggregator)
@@ -503,10 +504,11 @@ Provide your response in your directed JSON format.`,
 			Set("legal_reviews", results)
 	}
 
+	failFast := false
 	parallelCfg := config.ParallelConfig{
-		Observer:   wc.ObserverName(),
-		FailFast:   false,
-		MaxWorkers: len(registry.LegalReviewers),
+		Observer:    wc.ObserverName(),
+		FailFastNil: &failFast,
+		MaxWorkers:  len(registry.LegalReviewers),
 	}
 
 	parallelNode := workflows.ParallelNode(parallelCfg, tasks, processor, nil, aggregator)

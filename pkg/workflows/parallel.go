@@ -128,7 +128,7 @@ type indexedResult[TResult any] struct {
 //	    return response.Content(), nil
 //	}
 //
-//	cfg := config.DefaultParallelConfig() // FailFast: true
+//	cfg := config.DefaultParallelConfig() // FailFast() returns true
 //	result, err := workflows.ProcessParallel(ctx, cfg, questions, processor, nil)
 //	if err != nil {
 //	    log.Fatal(err) // First error stops all processing
@@ -137,7 +137,8 @@ type indexedResult[TResult any] struct {
 //
 // Example with collect-all-errors:
 //
-//	cfg := config.ParallelConfig{FailFast: false, Observer: "slog"}
+//	failFast := false
+//	cfg := config.ParallelConfig{FailFastNil: &failFast, Observer: "slog"}
 //	result, err := workflows.ProcessParallel(ctx, cfg, items, processor, nil)
 //	if err != nil {
 //	    log.Fatal("All items failed") // Only when ALL items failed
@@ -168,7 +169,7 @@ func ProcessParallel[TItem, TResult any](
 			Data: map[string]any{
 				"item_count":            0,
 				"worker_count":          0,
-				"fail_fast":             cfg.FailFast,
+				"fail_fast":             cfg.FailFast(),
 				"has_progress_callback": progress != nil,
 			},
 		})
@@ -199,7 +200,7 @@ func ProcessParallel[TItem, TResult any](
 		Data: map[string]any{
 			"item_count":            len(items),
 			"worker_count":          workerCount,
-			"fail_fast":             cfg.FailFast,
+			"fail_fast":             cfg.FailFast(),
 			"has_progress_callback": progress != nil,
 		},
 	})
@@ -219,7 +220,7 @@ func ProcessParallel[TItem, TResult any](
 
 	var cancelCtx context.Context
 	var cancel context.CancelFunc
-	if cfg.FailFast {
+	if cfg.FailFast() {
 		cancelCtx, cancel = context.WithCancel(ctx)
 		defer cancel()
 	} else {
@@ -244,7 +245,7 @@ func ProcessParallel[TItem, TResult any](
 				&completed,
 				len(items),
 				observer,
-				cfg.FailFast,
+				cfg.FailFast(),
 				cancel,
 			)
 		}(i)
@@ -294,7 +295,7 @@ func ProcessParallel[TItem, TResult any](
 	}
 
 	if len(errors) > 0 {
-		if cfg.FailFast || len(results) == 0 {
+		if cfg.FailFast() || len(results) == 0 {
 			observer.OnEvent(ctx, observability.Event{
 				Type:      observability.EventParallelComplete,
 				Timestamp: time.Now(),
