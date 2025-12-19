@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.3.1] - 2025-12-19
+
+**Added**:
+
+- `pkg/observability` - MultiObserver for broadcasting events to multiple observers
+
+  Added `MultiObserver` type that implements the `Observer` interface and forwards events to multiple wrapped observers. Constructor `NewMultiObserver(observers ...Observer)` accepts variadic observers and filters nil values. Enables composing observers for scenarios requiring multiple event destinations (e.g., database persistence + real-time streaming).
+
 ## [v0.3.0] - 2025-12-18
 
 **Breaking**:
